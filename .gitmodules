@@ -1,0 +1,8 @@
+[submodule "modules/hpdcache"]
+	path = modules/hpdcache
+	url = https://github.com/openhwgroup/cv-hpdcache.git
+	branch = master
+[submodule "modules/dv_utils"]
+	path = modules/dv_utils
+	url = https://github.com/openhwgroup/core-v-verif.git
+	branch = master
