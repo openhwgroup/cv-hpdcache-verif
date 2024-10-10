@@ -368,7 +368,7 @@ class test_base extends uvm_test;
 
          `uvm_info("RESET ON THE FLY", $sformatf("%0d(d), %0d(d)",env.m_hpdcache_sb.get_req_counter, nb_trans ), UVM_DEBUG);
          
-         if((env.m_hpdcache_sb.get_req_counter() == $urandom_range(2000, 4000)) || (clk_cnt == 10000)) begin
+         if((env.m_hpdcache_sb.get_req_counter() == $urandom_range(num_txn/4, num_txn/2)) || (clk_cnt == 10000)) begin
 
            phase.drop_objection(this, "Assert reset");
            env.reset_driver.emit_assert_reset();
