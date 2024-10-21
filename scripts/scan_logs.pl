@@ -1,5 +1,4 @@
 #!/usr/bin/env perl
-################################################################################
 # ----------------------------------------------------------------------------
 #Copyright 2024 CEA*
 #*Commissariat a l'Energie Atomique et aux Energies Alternatives (CEA)
