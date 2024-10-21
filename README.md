@@ -93,7 +93,7 @@ Followin steps are needed to compile and run a test
 2. Compile RTL and UVM testbench: 
 ```
    python3 $PROJECT_DIR/scripts/sim/sim_cmd_gen.py --help
-   ex: python3 $PROJECT_DIR/scripts/sim/sim_cmd_gen.py --cfg CONFIG1_HPC --outdir output --stdout 1
+   ex: python3 $PROJECT_DIR/scripts/sim/compile.py --cfg CONFIG1_HPC --outdir output --stdout 1
 ```
 
 3. Run a test: 
