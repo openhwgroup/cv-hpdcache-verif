@@ -99,6 +99,7 @@ interface conf_if (input bit clk_i, input bit rst_ni);
     hpdcache_req_sid_t cfg_hwpf_stride_sid_i;
     logic              cfg_error_on_cacheable_amo_i;
     logic              cfg_rtab_single_entry_i;
+    logic              cfg_default_wb_i;
 
     cfg_enable_i_assert                      : assert property ( @(posedge clk_i) disable iff(!rst_ni) !$isunknown( cfg_enable_i              ) );
     cfg_wbuf_threshold_i_assert              : assert property ( @(posedge clk_i) disable iff(!rst_ni) !$isunknown( cfg_wbuf_threshold_i              ) );
@@ -108,5 +109,6 @@ interface conf_if (input bit clk_i, input bit rst_ni);
   //  cfg_hwpf_stride_sid_i_assert             : assert property ( @(posedge clk_i) disable iff(!rst_ni) !$isunknown( cfg_hwpf_stride_sid_i                ) );
     cfg_error_on_cacheable_amo_i_assert      : assert property ( @(posedge clk_i) disable iff(!rst_ni) !$isunknown( cfg_error_on_cacheable_amo_i      ) );
     cfg_rtab_single_entry_i_assert           : assert property ( @(posedge clk_i) disable iff(!rst_ni) !$isunknown( cfg_rtab_single_entry_i           ) );
+    cfg_default_wb_i_assert                  : assert property ( @(posedge clk_i) disable iff(!rst_ni) !$isunknown( cfg_default_wb_i           ) );
 
 endinterface

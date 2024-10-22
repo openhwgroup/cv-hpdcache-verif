@@ -81,52 +81,30 @@ import hpdcache_common_pkg::*;
     input hpdcache_rsp_t                 core_rsp_o       [hpdcacheCfg.u.nRequesters-1:0],
 
     //      Miss read / invalidation interface
-    input  logic                          mem_req_miss_read_ready_i,
-    input logic                           mem_req_miss_read_valid_o,
-    input hpdcache_mem_req_t              mem_req_miss_read_o,
+    input  logic                          mem_req_read_ready_i,
+    input logic                           mem_req_read_valid_o,
+    input hpdcache_mem_req_t              mem_req_read_o,
 
-    input logic                           mem_resp_miss_read_ready_o,
-    input  logic                          mem_resp_miss_read_valid_i,
-    input  hpdcache_mem_resp_r_t          mem_resp_miss_read_i,
+    input logic                           mem_resp_read_ready_o,
+    input  logic                          mem_resp_read_valid_i,
+    input  hpdcache_mem_resp_r_t          mem_resp_read_i,
 `ifdef HPDCACHE_OPENPITON
-    input  logic                          mem_resp_miss_read_inval_i,
-    input  hpdcache_nline_t               mem_resp_miss_read_inval_nline_i,
+    input  logic                          mem_resp_read_inval_i,
+    input  hpdcache_nline_t               mem_resp_read_inval_nline_i,
 `endif
 
     //      Write-buffer write interface
-    input  logic                          mem_req_wbuf_write_ready_i,
-    input logic                           mem_req_wbuf_write_valid_o,
-    input hpdcache_mem_req_t              mem_req_wbuf_write_o,
+    input  logic                          mem_req_write_ready_i,
+    input logic                           mem_req_write_valid_o,
+    input hpdcache_mem_req_t              mem_req_write_o,
 
-    input  logic                          mem_req_wbuf_write_data_ready_i,
-    input logic                           mem_req_wbuf_write_data_valid_o,
-    input hpdcache_mem_req_w_t            mem_req_wbuf_write_data_o,
+    input  logic                          mem_req_write_data_ready_i,
+    input logic                           mem_req_write_data_valid_o,
+    input hpdcache_mem_req_w_t            mem_req_write_data_o,
 
-    input logic                           mem_resp_wbuf_write_ready_o,
-    input  logic                          mem_resp_wbuf_write_valid_i,
-    input  hpdcache_mem_resp_w_t          mem_resp_wbuf_write_i,
-
-    //      Uncached read interface
-    input  logic                         mem_req_uc_read_ready_i,
-    input logic                          mem_req_uc_read_valid_o,
-    input hpdcache_mem_req_t             mem_req_uc_read_o,
-
-    input logic                          mem_resp_uc_read_ready_o,
-    input  logic                         mem_resp_uc_read_valid_i,
-    input  hpdcache_mem_resp_r_t         mem_resp_uc_read_i,
-
-    //      Uncached write interface
-    input  logic                         mem_req_uc_write_ready_i,
-    input logic                          mem_req_uc_write_valid_o,
-    input hpdcache_mem_req_t             mem_req_uc_write_o,
-
-    input  logic                         mem_req_uc_write_data_ready_i,
-    input logic                          mem_req_uc_write_data_valid_o,
-    input hpdcache_mem_req_w_t           mem_req_uc_write_data_o,
-
-    input logic                          mem_resp_uc_write_ready_o,
-    input  logic                         mem_resp_uc_write_valid_i,
-    input  hpdcache_mem_resp_w_t         mem_resp_uc_write_i,
+    input logic                           mem_resp_write_ready_o,
+    input  logic                          mem_resp_write_valid_i,
+    input  hpdcache_mem_resp_w_t          mem_resp_write_i,
 
     //      Performance events
     input logic                          evt_cache_write_miss_o,
@@ -153,6 +131,8 @@ import hpdcache_common_pkg::*;
     input  logic                          cfg_prefetch_updt_plru_i,
     input  logic                          cfg_error_on_cacheable_amo_i,
     input  logic                          cfg_rtab_single_entry_i,
+    input  logic                          cfg_default_wb_i,
+
     // Internal signals
     input logic miss_mshr_empty,
     input logic ctrl_empty, rtab_empty,
@@ -172,54 +152,6 @@ import hpdcache_common_pkg::*;
 
   logic post_shutdown_phase; 
 
-
- logic              mem_req_write_valid_o; 
- logic              mem_req_write_ready_i;
- hpdcache_mem_req_t mem_req_write_o;
-
- logic                mem_req_write_data_valid_o; 
- logic                mem_req_write_data_ready_i;
- hpdcache_mem_req_w_t mem_req_write_data_o;
-
- logic              mem_req_read_valid_o; 
- logic              mem_req_read_ready_i;
- hpdcache_mem_req_t mem_req_read_o;
-
- logic                          mem_resp_read_ready_o;
- logic                          mem_resp_read_valid_i;
- hpdcache_mem_resp_r_t          mem_resp_read_i;
- logic                          mem_resp_write_ready_o;
- logic                          mem_resp_write_valid_i;
- hpdcache_mem_resp_w_t          mem_resp_write_i;
-
-  assign mem_req_read_valid_o = mem_req_miss_read_valid_o | mem_req_uc_read_valid_o;
-  assign mem_req_read_ready_i = mem_req_miss_read_ready_i | mem_req_uc_read_ready_i;
-  assign mem_req_read_o       = (mem_req_miss_read_valid_o & mem_req_miss_read_ready_i ) ? mem_req_miss_read_o:
-                                (mem_req_uc_read_valid_o & mem_req_uc_read_ready_i )     ? mem_req_uc_read_o: mem_req_read_o;
-
-  assign mem_req_write_valid_o = mem_req_wbuf_write_valid_o | mem_req_uc_write_valid_o;
-  assign mem_req_write_ready_i = mem_req_wbuf_write_ready_i | mem_req_uc_write_ready_i;
-  assign mem_req_write_o       = (mem_req_wbuf_write_valid_o & mem_req_wbuf_write_ready_i ) ? mem_req_wbuf_write_o:
-                                 (mem_req_uc_write_valid_o   & mem_req_uc_write_ready_i )   ? mem_req_uc_write_o: 
-                                  mem_req_write_o;
-
-  assign mem_req_write_data_valid_o = mem_req_wbuf_write_data_valid_o | mem_req_uc_write_data_valid_o;
-  assign mem_req_write_data_ready_i = mem_req_wbuf_write_data_ready_i | mem_req_uc_write_data_ready_i;
-  assign mem_req_write_data_o       = (mem_req_wbuf_write_data_valid_o & mem_req_wbuf_write_data_ready_i ) ? mem_req_wbuf_write_data_o:
-                                      (mem_req_uc_write_data_valid_o   & mem_req_uc_write_data_ready_i )   ? mem_req_uc_write_data_o: 
-                                       mem_req_write_data_o;
-
- assign mem_resp_read_ready_o  = mem_resp_miss_read_ready_o| mem_resp_uc_read_ready_o;
- assign mem_resp_read_valid_i  = mem_resp_miss_read_valid_i| mem_resp_uc_read_valid_i;
- assign mem_resp_read_i        =(mem_resp_miss_read_ready_o & mem_resp_miss_read_valid_i) ? mem_resp_miss_read_i: 
-                                (mem_resp_uc_read_ready_o & mem_resp_uc_read_valid_i)     ? mem_resp_uc_read_i: 
-                                 mem_resp_read_i;
-
- assign mem_resp_write_ready_o  = mem_resp_wbuf_write_ready_o| mem_resp_uc_write_ready_o;
- assign mem_resp_write_valid_i  = mem_resp_wbuf_write_valid_i| mem_resp_uc_write_valid_i;
- assign mem_resp_write_i        =(mem_resp_wbuf_write_ready_o & mem_resp_wbuf_write_valid_i) ? mem_resp_wbuf_write_i: 
-                                 (mem_resp_uc_write_ready_o & mem_resp_uc_write_valid_i)     ? mem_resp_uc_write_i: 
-                                  mem_resp_write_i;
 
 
   genvar itr_wbuf;

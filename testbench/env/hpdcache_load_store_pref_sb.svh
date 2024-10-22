@@ -48,45 +48,33 @@ case (req.op)
     if(req.need_rsp == 1) m_load_data[set][tag].push_back(m_memory[addr].data);
     if(req.pma.uncacheable == 0) cnt_read_req++;
   end
-  HPDCACHE_REQ_CMO   : 
+  // case 0, 1 is treated saparetly 
+  HPDCACHE_REQ_CMO_FENCE:  
+  begin
+    cnt_cmo_req++;
+    `uvm_info("SB HPDCACHE CMO FENCE", $sformatf("SET=%0d(d), TAG=%0x(x)  Offset=%0d(d)", set, tag, offset), UVM_MEDIUM);
+  end
+  HPDCACHE_REQ_CMO_INVAL_NLINE: 
   begin 
-    case ( req.size )
-      // case 0, 1 is treated saparetly 
-      HPDCACHE_REQ_CMO_FENCE:  
-      begin
-        cnt_cmo_req++;
-        `uvm_info("SB HPDCACHE CMO FENCE", $sformatf("SET=%0d(d), TAG=%0x(x)  Offset=%0d(d)", set, tag, offset), UVM_MEDIUM);
-      end
-      HPDCACHE_REQ_CMO_INVAL_NLINE: 
-      begin 
-        cnt_cmo_req++; 
-        `uvm_info("SB HPDCACHE CMO INVALID", $sformatf("SET=%0d(d), TAG=%0x(x)  Offset=%0d(d)", set, tag, offset), UVM_MEDIUM);
-      end
-      HPDCACHE_REQ_CMO_INVAL_SET_WAY: 
-      begin 
-        cnt_cmo_req++; 
-        `uvm_info("SB HPDCACHE CMO INVAL SET WAY", $sformatf("SET=%0d(d), TAG=%0x(x)  Offset=%0d(d)", set, tag, offset), UVM_MEDIUM);
-      end
-      HPDCACHE_REQ_CMO_INVAL_ALL: 
-      begin 
-        cnt_cmo_req++; 
-        `uvm_info("SB HPDCACHE CMO INVAL ALL", $sformatf("SET=%0d(d), TAG=%0x(x)  Offset=%0d(d)", set, tag, offset), UVM_MEDIUM);
-      end
-      HPDCACHE_REQ_CMO_PREFETCH: 
-      begin 
-        if (req.pma.uncacheable == 0) begin
-         // FIXME: for the moment RTL is behaving that way 
-         if(req.size == HPDCACHE_REQ_CMO_PREFETCH) cnt_read_req++;
+    cnt_cmo_req++; 
+    `uvm_info("SB HPDCACHE CMO INVALID", $sformatf("SET=%0d(d), TAG=%0x(x)  Offset=%0d(d)", set, tag, offset), UVM_MEDIUM);
+  end
+  HPDCACHE_REQ_CMO_INVAL_ALL: 
+  begin 
+    cnt_cmo_req++; 
+    `uvm_info("SB HPDCACHE CMO INVAL ALL", $sformatf("SET=%0d(d), TAG=%0x(x)  Offset=%0d(d)", set, tag, offset), UVM_MEDIUM);
+  end
+  HPDCACHE_REQ_CMO_PREFETCH: 
+  begin 
+    if (req.pma.uncacheable == 0) begin
 
-         // This sends a read miss request on the meme interface
-         cnt_pref_req++; 
-         create_and_init_memory_node(addr, HPDCACHE_MEM_LOAD_NUM);
-         `uvm_info("SB HPDCACHE CMO", $sformatf("SET=%0d(d), TAG=%0x(x)  Offset=%0d(d) DATA=%0x(x)", set, tag, offset, m_memory[addr].data), UVM_MEDIUM);
-        end else begin
-         cnt_pref_err_req++; 
-        end
-      end
-    endcase
+     // This sends a read miss request on the meme interface
+     cnt_pref_req++; 
+     create_and_init_memory_node(addr, HPDCACHE_MEM_LOAD_NUM);
+     `uvm_info("SB HPDCACHE CMO", $sformatf("SET=%0d(d), TAG=%0x(x)  Offset=%0d(d) DATA=%0x(x)", set, tag, offset, m_memory[addr].data), UVM_MEDIUM);
+    end else begin
+     cnt_pref_err_req++; 
+    end
   end
   HPDCACHE_REQ_STORE: 
   begin

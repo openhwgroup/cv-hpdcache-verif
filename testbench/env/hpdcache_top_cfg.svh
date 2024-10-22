@@ -36,6 +36,21 @@ class hpdcache_top_cfg extends uvm_object;
     rand bp_type_t m_write_req_bp_type;
     rand bp_type_t m_write_data_bp_type;
 
+    // choses between one of the 3 write policies or random
+    //   HPDCACHE_WR_POLICY_AUTO = 3'b001,
+    //   HPDCACHE_WR_POLICY_WB   = 3'b010,
+    //   HPDCACHE_WR_POLICY_WT   = 3'b100
+    //   RANDOM
+    rand bit[2:0]  m_write_policy;
+    // ------------------------------------------------------------------------
+    // tag with 4 lsb == m_wt_tag_bits are fixed write through
+    // ------------------------------------------------------------------------
+    rand bit[3:0]  m_wt_tag_bits;
+    // ------------------------------------------------------------------------
+    // tag with 4 lsb == m_wb_tag_bits are fixed write back
+    // ------------------------------------------------------------------------
+    rand bit[3:0]  m_wb_tag_bits;
+
     // ------------------------------------------------------------------------
     // Constructor
     // ------------------------------------------------------------------------
@@ -69,9 +84,13 @@ class hpdcache_top_cfg extends uvm_object;
                 m_num_requesters  == 1; 
             }
 
+   // Chose mostly random writ policy
+   constraint m_write_policy_c       {m_write_policy dist {1 := 5,  2 := 5, 3:= 5, 0:= 85 };};
+   constraint reset_on_the_fly_c   {m_reset_on_the_fly == 1;} // insert reset on the fly 10% of the time
+   constraint flush_on_the_fly_c   {m_flush_on_the_fly == 0;} // insert flush on the fly 10% of the time
 
-   constraint reset_on_the_fly_c   {m_reset_on_the_fly dist {1 := 10, 0 := 90};} // insert reset on the fly 10% of the time
-   constraint flush_on_the_fly_c   {m_flush_on_the_fly dist {1 := 10, 0 := 90};} // insert flush on the fly 10% of the time
+ //  constraint reset_on_the_fly_c   {m_reset_on_the_fly dist {1 := 10, 0 := 90};} // insert reset on the fly 10% of the time
+ //  constraint flush_on_the_fly_c   {m_flush_on_the_fly dist {1 := 10, 0 := 90};} // insert flush on the fly 10% of the time
    constraint num_requerts_c { m_requester_enable.sum() == m_num_requesters; }
 
    constraint bPLRU_c      { m_bPLRU_enable  == 0; }

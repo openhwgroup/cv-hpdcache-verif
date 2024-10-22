@@ -42,6 +42,15 @@ class test_hpdcache_multiple_directed_addr_bPLRU_prediction extends test_hpdcach
           {
             m_enable        == 1'b1;
             rsp_mode        == ZERO_DELAY_RSP;
+            insert_wr_error        == 1'b0; 
+            insert_rd_error        == 1'b0; 
+            insert_amo_wr_error        == 1'b0; 
+            insert_amo_rd_error        == 1'b0; 
+            insert_wr_exclusive_fail        == 1'b0; 
+            insert_rd_exclusive_fail        == 1'b0; 
+            unsolicited_rsp        == 1'b0; 
+
+
           } )
     begin    
       `uvm_error("End of elaboration", "Randomization of config failed");

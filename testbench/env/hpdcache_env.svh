@@ -59,11 +59,8 @@ class hpdcache_env#(int NREQUESTERS = 1) extends uvm_env;
   `ifdef AXI2MEM
     axi2mem #(HPDCACHE_PA_WIDTH, 
               HPDCACHE_MEM_DATA_WIDTH, 
-              HPDCACHE_MEM_ID_WIDTH, 1) m_axi2mem_c_req;
+              HPDCACHE_MEM_ID_WIDTH, 1) m_axi2mem_req;
  
-    axi2mem #(HPDCACHE_PA_WIDTH, 
-              HPDCACHE_MEM_DATA_WIDTH, 
-              HPDCACHE_MEM_ID_WIDTH, 1) m_axi2mem_uc_req;
   `endif
   // ----------------------------------------------
   // This classe configures the memory response model 
@@ -122,13 +119,10 @@ class hpdcache_env#(int NREQUESTERS = 1) extends uvm_env;
                                                      HPDCACHE_MEM_ID_WIDTH)::type_id::create("mem_rsp_model", this);
 
    `ifdef AXI2MEM
-    m_axi2mem_c_req        = axi2mem #(HPDCACHE_PA_WIDTH, 
+    m_axi2mem_req        = axi2mem #(HPDCACHE_PA_WIDTH, 
                                        HPDCACHE_MEM_DATA_WIDTH, 
-                                       HPDCACHE_MEM_ID_WIDTH, 1)::type_id::create("axi2mem_c_req", this);
+                                       HPDCACHE_MEM_ID_WIDTH, 1)::type_id::create("axi2mem_req", this);
 
-    m_axi2mem_uc_req       = axi2mem #(HPDCACHE_PA_WIDTH, 
-                                   HPDCACHE_MEM_DATA_WIDTH, 
-                                   HPDCACHE_MEM_ID_WIDTH, 1)::type_id::create("axi2mem_uc_req", this);
     `endif
 
     // Creating the configuration object
@@ -165,8 +159,8 @@ class hpdcache_env#(int NREQUESTERS = 1) extends uvm_env;
     // ---------------------------------
     // Connect mem monitor to SB
     // ---------------------------------
-    m_dram_mon.m_monitor.ap_mem_miss_req.connect(m_hpdcache_sb.af_mem_req.analysis_export );
-    m_dram_mon.m_monitor.ap_mem_miss_ext_req.connect(m_hpdcache_sb.af_mem_ext_req.analysis_export );
+    m_dram_mon.m_monitor.ap_mem_req.connect(m_hpdcache_sb.af_mem_req.analysis_export );
+    m_dram_mon.m_monitor.ap_mem_ext_req.connect(m_hpdcache_sb.af_mem_ext_req.analysis_export );
     m_dram_mon.m_monitor.ap_mem_read_rsp.connect(m_hpdcache_sb.af_mem_read_rsp.analysis_export );
     m_dram_mon.m_monitor.ap_mem_write_rsp.connect(m_hpdcache_sb.af_mem_write_rsp.analysis_export );
 

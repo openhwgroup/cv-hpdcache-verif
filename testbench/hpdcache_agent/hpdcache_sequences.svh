@@ -35,6 +35,7 @@ class hpdcache_base_sequence extends uvm_sequence #(hpdcache_txn);
   int                     unique_set[HPDCACHE_SETS];
 
   memory_partitions_cfg    #(HPDCACHE_PA_WIDTH) m_hpdcache_partitions;
+  hpdcache_txn            item;
 
 
   function new( string name = "base_data_txn_sequence" );
@@ -54,10 +55,29 @@ class hpdcache_base_sequence extends uvm_sequence #(hpdcache_txn);
       unique_set[i] = i;
     end
     unique_set.shuffle();
+
+//    if( !my_sequencer.m_top_cfg.randomize()) begin
+//      `uvm_error("End of elaboration", "Randomization of config failed");
+//    end
+
+    item                 = hpdcache_txn::type_id::create("dcach single request");
+
+    
+  //  item.m_write_policy = my_sequencer.m_top_cfg.m_write_policy;
+  //  item.m_wt_tag_bits  = my_sequencer.m_top_cfg.m_wt_tag_bits ;
+  //  item.m_wb_tag_bits  = my_sequencer.m_top_cfg.m_wb_tag_bits ;
   endtask: pre_body
 
   virtual task body( );
     super.body();
+  endtask
+
+  virtual task post_body( );
+    super.post_body();
+    `uvm_info("HPDCACHE SEQUENCE IS NOT EMPTY", $sformatf("ID list size %0d(d) is not empty",  my_sequencer.q_inflight_tid.size), UVM_HIGH);
+      // Waiting for the reception of all responses in the case of id management
+    wait( my_sequencer.q_inflight_tid.size == 0 );
+    `uvm_info("HPDCACHE SEQUENCE IS EMPTY", $sformatf("ID list size %0d(d) is empty",  my_sequencer.q_inflight_tid.size), UVM_HIGH);
   endtask
 
 
@@ -109,7 +129,6 @@ endclass: hpdcache_base_sequence
 class hpdcache_generic_request extends  hpdcache_base_sequence;
   `uvm_object_utils( hpdcache_generic_request );
 
-  hpdcache_txn       item;
 
   function new( string name = "single_txn_sequence" );
     super.new(name);
@@ -138,7 +157,6 @@ endclass: hpdcache_generic_request
 class hpdcache_single_non_cmo_request extends  hpdcache_base_sequence;
   `uvm_object_utils( hpdcache_single_non_cmo_request );
 
-  hpdcache_txn       item;
 
   function new( string name = "single_txn_sequence" );
     super.new(name);
@@ -147,7 +165,6 @@ class hpdcache_single_non_cmo_request extends  hpdcache_base_sequence;
   virtual task body( );
     super.body();
 
-    item                = hpdcache_txn::type_id::create("dcach single request");
 
     // --------------------------------------------------------------------------------
     // to generate unique TID a list of tid in flight is passed on to the sequence
@@ -158,7 +175,19 @@ class hpdcache_single_non_cmo_request extends  hpdcache_base_sequence;
     // Randomize transaction item
     // --------------------------------
     if ( !item.randomize() with { m_req_sid == sid ; 
-                                  m_req_op  != HPDCACHE_REQ_CMO; } )
+                                  m_req_op inside {  HPDCACHE_REQ_LOAD                 ,
+                                                     HPDCACHE_REQ_STORE                ,
+                                                     HPDCACHE_REQ_AMO_LR               ,
+                                                     HPDCACHE_REQ_AMO_SC               ,
+                                                     HPDCACHE_REQ_AMO_SWAP             ,
+                                                     HPDCACHE_REQ_AMO_ADD              ,
+                                                     HPDCACHE_REQ_AMO_AND              ,
+                                                     HPDCACHE_REQ_AMO_OR               ,
+                                                     HPDCACHE_REQ_AMO_XOR              ,
+                                                     HPDCACHE_REQ_AMO_MAX              ,
+                                                     HPDCACHE_REQ_AMO_MAXU             ,
+                                                     HPDCACHE_REQ_AMO_MIN              ,
+                                                     HPDCACHE_REQ_AMO_MINU            }; } )
       `uvm_fatal("body","Randomization failed");
 
     // ----------------------------------------------------
@@ -187,7 +216,6 @@ endclass: hpdcache_single_non_cmo_request
 class hpdcache_single_request extends  hpdcache_base_sequence;
   `uvm_object_utils( hpdcache_single_request );
 
-  hpdcache_txn       item;
 
   function new( string name = "single_txn_sequence" );
     super.new(name);
@@ -196,7 +224,6 @@ class hpdcache_single_request extends  hpdcache_base_sequence;
   virtual task body( );
     super.body();
 
-    item                = hpdcache_txn::type_id::create("dcach single request");
 
     // --------------------------------------------------------------------------------
     // to generate unique TID a list of tid in flight is passed on to the sequence
@@ -233,7 +260,6 @@ endclass: hpdcache_single_request
 class hpdcache_single_request_cached extends  hpdcache_base_sequence;
   `uvm_object_utils( hpdcache_single_request_cached );
 
-  hpdcache_txn       item;
 
   function new( string name = "single_txn_sequence" );
     super.new(name);
@@ -242,7 +268,6 @@ class hpdcache_single_request_cached extends  hpdcache_base_sequence;
   virtual task body( );
     super.body();
 
-    item                = hpdcache_txn::type_id::create("dcach single request");
 
     // --------------------------------------------------------------------------------
     // to generate unique TID a list of tid in flight is passed on to the sequence
@@ -278,7 +303,6 @@ endclass: hpdcache_single_request_cached
 class hpdcache_single_request_mostly_cached extends  hpdcache_base_sequence;
   `uvm_object_utils( hpdcache_single_request_mostly_cached );
 
-  hpdcache_txn       item;
 
   function new( string name = "single_txn_sequence" );
     super.new(name);
@@ -287,7 +311,6 @@ class hpdcache_single_request_mostly_cached extends  hpdcache_base_sequence;
   virtual task body( );
     super.body();
 
-    item                = hpdcache_txn::type_id::create("dcach single request");
 
     // --------------------------------------------------------------------------------
     // to generate unique TID a list of tid in flight is passed on to the sequence
@@ -330,7 +353,6 @@ endclass: hpdcache_single_request_mostly_cached
 class hpdcache_single_request_uncached extends  hpdcache_base_sequence;
   `uvm_object_utils( hpdcache_single_request_uncached );
 
-  hpdcache_txn       item;
 
   function new( string name = "single_txn_sequence" );
     super.new(name);
@@ -339,7 +361,6 @@ class hpdcache_single_request_uncached extends  hpdcache_base_sequence;
   virtual task body( );
     super.body();
 
-    item                = hpdcache_txn::type_id::create("dcach single request");
 
     // --------------------------------------------------------------------------------
     // to generate unique TID a list of tid in flight is passed on to the sequence
@@ -378,7 +399,6 @@ class hpdcache_single_request_in_region extends  hpdcache_base_sequence;
   `uvm_object_utils( hpdcache_single_request_in_region );
 
   static int        region;
-  hpdcache_txn      item;
   int               m_cacheable;
 
   function new( string name = "single_txn_sequence" );
@@ -388,7 +408,6 @@ class hpdcache_single_request_in_region extends  hpdcache_base_sequence;
   virtual task body( );
     super.body();
     
-    item = hpdcache_txn::type_id::create("dcach single request");
 
     // --------------------------------------------------------------------------------
     // to generate unique TID a list of tid in flight is passed on to the sequence
@@ -454,7 +473,6 @@ endclass: hpdcache_single_request_in_region
 class hpdcache_single_request_with_errors extends  hpdcache_base_sequence;
   `uvm_object_utils( hpdcache_single_request_with_errors );
 
-  hpdcache_txn          item;
   hpdcache_req_addr_t   saved_addr        = 0;
   hpdcache_req_size_t   saved_size        = 0;
   hpdcache_req_op_t     saved_op          = HPDCACHE_REQ_LOAD;
@@ -469,7 +487,6 @@ class hpdcache_single_request_with_errors extends  hpdcache_base_sequence;
     super.body();
 
     for ( int i = 0 ; i < 2 ; i++ ) begin
-	    item = hpdcache_txn::type_id::create("dcach single request");
 
 	    // --------------------------------------------------------------------------------
 	    // to generate unique TID a list of tid in flight is passed on to the sequence
@@ -537,7 +554,6 @@ endclass: hpdcache_single_request_with_errors
 class hpdcache_single_lr_sc_request extends  hpdcache_base_sequence;
   `uvm_object_utils( hpdcache_single_lr_sc_request );
 
-  hpdcache_txn        item;
   
   hpdcache_req_addr_t saved_addr;
   hpdcache_req_addr_t random_addr;
@@ -561,7 +577,6 @@ class hpdcache_single_lr_sc_request extends  hpdcache_base_sequence;
     // lots of cacheable 
     uncacheable = ($urandom_range(0, 100) > 5) ? 0: 1;
     for ( int i = 0 ; i < 10 ; i++ ) begin     
-      item = hpdcache_txn::type_id::create("dcach single amo request");
 
       // --------------------------------------------------------------------------------
       // to generate unique TID a list of tid in flight is passed on to the sequence
@@ -569,7 +584,6 @@ class hpdcache_single_lr_sc_request extends  hpdcache_base_sequence;
       item.q_inflight_tid = my_sequencer.q_inflight_tid;
 
       random_addr     = {$random, $random};
-    //  rand_addr[$clog2(HPDCACHE_REQ_DATA_WIDTH/8) -1:0] = $urandom_range(1, $clog2(HPDCACHE_REQ_DATA_WIDTH));
       saved_addr[$clog2(HPDCACHE_PA_WIDTH) -1: 0] = random_addr[$clog2(HPDCACHE_PA_WIDTH) -1: 0];
       random_offset = hpdcache_get_req_addr_offset(random_addr);
       random_tag    = hpdcache_get_req_addr_tag(random_addr);
@@ -582,7 +596,14 @@ class hpdcache_single_lr_sc_request extends  hpdcache_base_sequence;
           m_req_tag    dist { saved_tag    := 90, random_tag    := 10};
           m_req_op     dist { HPDCACHE_REQ_AMO_LR := 40, HPDCACHE_REQ_AMO_SC := 40, 
                               HPDCACHE_REQ_LOAD     := 9,
-                              HPDCACHE_REQ_CMO      := 1,
+                              HPDCACHE_REQ_CMO_FENCE             := 1,
+                              HPDCACHE_REQ_CMO_PREFETCH          := 1,
+                              HPDCACHE_REQ_CMO_INVAL_NLINE       := 1,
+                              HPDCACHE_REQ_CMO_INVAL_ALL         := 1,
+                              HPDCACHE_REQ_CMO_FLUSH_NLINE       := 1,
+                              HPDCACHE_REQ_CMO_FLUSH_ALL         := 1,
+                              HPDCACHE_REQ_CMO_FLUSH_INVAL_NLINE := 1,
+                              HPDCACHE_REQ_CMO_FLUSH_INVAL_ALL   := 1,
                               HPDCACHE_REQ_STORE    := 1,
                               HPDCACHE_REQ_AMO_SWAP := 1,
                               HPDCACHE_REQ_AMO_ADD  := 1,
@@ -597,7 +618,7 @@ class hpdcache_single_lr_sc_request extends  hpdcache_base_sequence;
                              }; })
       `uvm_fatal("body","Randomization failed");	
 
-        tag = hpdcache_get_req_addr_tag(item.m_req_addr);
+      tag = hpdcache_get_req_addr_tag(item.m_req_addr);
 
      //   if ( !my_sequencer.q_uncacheable.exists(tag) ) my_sequencer.q_uncacheable[tag] = m_req_uncacheable;
      //   item.m_req_uncacheable = my_sequencer.q_uncacheable[tag]; 
@@ -608,7 +629,9 @@ class hpdcache_single_lr_sc_request extends  hpdcache_base_sequence;
       if ( item.m_req_need_rsp == 1 ) begin 
         my_sequencer.q_inflight_tid[item.m_req_tid] = item.m_req_tid;
       end
-	
+
+      if(item.m_req_tag == saved_tag) item.m_wr_policy_hint = HPDCACHE_WR_POLICY_WT;	
+
       start_item( item );
       finish_item( item );
     end
@@ -623,7 +646,6 @@ endclass: hpdcache_single_lr_sc_request
 class hpdcache_single_directed_addr extends  hpdcache_base_sequence;
   `uvm_object_utils( hpdcache_single_directed_addr );
 
-  hpdcache_txn item;
   int        m_cacheable;
   hpdcache_req_offset_t        offset;
   hpdcache_tag_t               tag;
@@ -636,7 +658,6 @@ class hpdcache_single_directed_addr extends  hpdcache_base_sequence;
   virtual task body( );
     super.body();
 
-    item = hpdcache_txn::type_id::create("dcach single request");
 
     // --------------------------------------------------------------------------------
     // to generate unique TID a list of tid in flight is passed on to the sequence
@@ -1074,7 +1095,6 @@ endclass: hpdcache_multiple_amo_lr_sc_requests
 class hpdcache_consecutive_set_access_request_cached extends  hpdcache_base_sequence;
   `uvm_object_utils( hpdcache_consecutive_set_access_request_cached );
 
-  hpdcache_txn      item;
   hpdcache_set_t    set; 
   hpdcache_tag_t    tag;
   hpdcache_offset_t offset;
@@ -1087,7 +1107,6 @@ class hpdcache_consecutive_set_access_request_cached extends  hpdcache_base_sequ
     super.body();
 
     for(int i = 0; i < num_txn; i ++) begin
-      item                = hpdcache_txn::type_id::create("dcach single request");
 
       // --------------------------------------------------------------------------------
       // to generate unique TID a list of tid in flight is passed on to the sequence
@@ -1132,7 +1151,6 @@ endclass: hpdcache_consecutive_set_access_request_cached
 class hpdcache_same_tag_set_access_request_cached extends  hpdcache_base_sequence;
   `uvm_object_utils( hpdcache_same_tag_set_access_request_cached );
 
-  hpdcache_txn        item;
   hpdcache_set_t      set; 
   hpdcache_tag_t      tag;
   hpdcache_offset_t   offset;
@@ -1147,7 +1165,6 @@ class hpdcache_same_tag_set_access_request_cached extends  hpdcache_base_sequenc
     super.body();
 
     for(int i = 0; i < HPDCACHE_WBUF_DIR_ENTRIES+HPDCACHE_RTAB_ENTRIES + 10; i ++) begin
-      item                = hpdcache_txn::type_id::create("dcach single request");
 
       // --------------------------------------------------------------------------------
       // to generate unique TID a list of tid in flight is passed on to the sequence

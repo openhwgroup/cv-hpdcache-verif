@@ -23,73 +23,39 @@ import dram_mon_agent_pkg::*;
 interface dram_if (input bit clk_i, input bit rst_ni);
 
     //      Miss read interface
-    logic                          mem_req_miss_read_ready_i;
-    logic                          mem_req_miss_read_valid_o;
-    hpdcache_mem_req_t               mem_req_miss_read_o;
-    hpdcache_mem_id_t                mem_req_miss_read_base_id_i;
+    logic                          mem_req_read_ready_i;
+    logic                          mem_req_read_valid_o;
+    hpdcache_mem_req_t             mem_req_read_o;
+    hpdcache_mem_id_t              mem_req_read_base_id_i;
 
-    logic                          mem_resp_miss_read_ready_o;
-    logic                          mem_resp_miss_read_valid_i;
-    logic                          mem_resp_miss_read_valid_int_i;
-    hpdcache_mem_resp_r_t            mem_resp_miss_read_int_i;
-    hpdcache_mem_resp_r_t            mem_resp_miss_read_i;
+    logic                          mem_resp_read_ready_o;
+    logic                          mem_resp_read_valid_i;
+    logic                          mem_resp_read_valid_int_i;
+    hpdcache_mem_resp_r_t          mem_resp_read_int_i;
+    hpdcache_mem_resp_r_t          mem_resp_read_i;
 
     //      Write-buffer write interface
-    logic                          mem_req_wbuf_write_ready_i;
-    logic                          mem_req_wbuf_write_valid_o;
-    hpdcache_mem_req_t               mem_req_wbuf_write_o;
-    hpdcache_mem_id_t                mem_req_wbuf_write_base_id_i;
-    bp_t                           mem_req_wbuf_write_ready_bp; 
+    logic                          mem_req_write_ready_i;
+    logic                          mem_req_write_valid_o;
+    hpdcache_mem_req_t             mem_req_write_o;
+    hpdcache_mem_id_t              mem_req_write_base_id_i;
+    bp_t                           mem_req_write_ready_bp; 
     
-    logic                          mem_req_wbuf_write_data_ready_i;
-    logic                          mem_req_wbuf_write_data_valid_o;
-    hpdcache_mem_req_w_t             mem_req_wbuf_write_data_o;
-    bp_t                           mem_req_wbuf_write_data_ready_bp; 
+    logic                          mem_req_write_data_ready_i;
+    logic                          mem_req_write_data_valid_o;
+    hpdcache_mem_req_w_t           mem_req_write_data_o;
+    bp_t                           mem_req_write_data_ready_bp; 
 
-    logic                          mem_req_wbuf_write_ready_int_i;
-    logic                          mem_req_wbuf_write_valid_int_o;
-    hpdcache_mem_ext_req_t           mem_req_wbuf_write_int_o;         
+    logic                          mem_req_write_ready_int_i;
+    logic                          mem_req_write_valid_int_o;
+    hpdcache_mem_ext_req_t         mem_req_write_int_o;         
     
-    logic                          mem_resp_wbuf_write_ready_o;
-    logic                          mem_resp_wbuf_write_valid_i;
-    hpdcache_mem_resp_w_t            mem_resp_wbuf_write_i;
+    logic                          mem_resp_write_ready_o;
+    logic                          mem_resp_write_valid_i;
+    hpdcache_mem_resp_w_t          mem_resp_write_i;
 
-    logic                          mem_resp_wbuf_write_valid_int_i;
-    hpdcache_mem_resp_w_t            mem_resp_wbuf_write_int_i;
-    //      Uncached read interface
-    logic                          mem_req_uc_read_ready_i;
-    logic                          mem_req_uc_read_valid_o;
-    hpdcache_mem_req_t               mem_req_uc_read_o;
-    hpdcache_mem_id_t                mem_req_uc_read_base_id_i;
-
-    logic                          mem_resp_uc_read_ready_o;
-    logic                          mem_resp_uc_read_valid_i;
-    logic                          mem_resp_uc_read_valid_int_i;
-    hpdcache_mem_resp_r_t            mem_resp_uc_read_int_i;
-    hpdcache_mem_resp_r_t            mem_resp_uc_read_i;
-
-    //      Uncached write interface
-    logic                          mem_req_uc_write_ready_i;
-    logic                          mem_req_uc_write_valid_o;
-    hpdcache_mem_req_t               mem_req_uc_write_o;
-    hpdcache_mem_id_t                mem_req_uc_write_base_id_i;
-    bp_t                           mem_req_uc_write_ready_bp; 
-
-    logic                          mem_req_uc_write_data_ready_i;
-    logic                          mem_req_uc_write_data_valid_o;
-    hpdcache_mem_req_w_t             mem_req_uc_write_data_o;
-    bp_t                           mem_req_uc_write_data_ready_bp; 
-
-    logic                          mem_resp_uc_write_ready_o;
-    logic                          mem_resp_uc_write_valid_i;
-    hpdcache_mem_resp_w_t            mem_resp_uc_write_i;
-
-
-    logic                          mem_req_uc_write_ready_int_i;
-    logic                          mem_req_uc_write_valid_int_o;
-    hpdcache_mem_ext_req_t           mem_req_uc_write_int_o;         
-    logic                          mem_resp_uc_write_valid_int_i;
-    hpdcache_mem_resp_w_t            mem_resp_uc_write_int_i;
+    logic                          mem_resp_write_valid_int_i;
+    hpdcache_mem_resp_w_t          mem_resp_write_int_i;
 
     // ------------------------------------------------------------------------
     // Delay Task
@@ -106,27 +72,27 @@ interface dram_if (input bit clk_i, input bit rst_ni);
 //    // Back Pressure on ready signal 
 //    always_ff @(posedge clk_i or negedge rst_ni) begin
 //      if(~rst_ni) begin
-//        mem_req_wbuf_write_ready_i <= 0;
+//        mem_req_write_ready_i <= 0;
 //      end else begin
-//        case(mem_req_wbuf_write_ready_bp)
+//        case(mem_req_write_ready_bp)
 //          NEVER :
 //          begin
-//           mem_req_wbuf_write_ready_i <= 1'b1; 
+//           mem_req_write_ready_i <= 1'b1; 
 //          end
 //          LIGHT : 
 //          begin 
-//           if($urandom_range(1, 3) == 2)     mem_req_wbuf_write_ready_i <= 1'b0;
-//           else                              mem_req_wbuf_write_ready_i <= 1'b1; 
+//           if($urandom_range(1, 3) == 2)     mem_req_write_ready_i <= 1'b0;
+//           else                              mem_req_write_ready_i <= 1'b1; 
 //          end
 //          MEDIUM:
 //          begin 
-//           if($urandom_range(1, 10) >= 4)    mem_req_wbuf_write_ready_i <= 1'b0;
-//           else                              mem_req_wbuf_write_ready_i <= 1'b1; 
+//           if($urandom_range(1, 10) >= 4)    mem_req_write_ready_i <= 1'b0;
+//           else                              mem_req_write_ready_i <= 1'b1; 
 //          end
 //          HEAVY: 
 //          begin 
-//           if($urandom_range(1, 20) >= 5)    mem_req_wbuf_write_ready_i <= 1'b0;
-//           else                              mem_req_wbuf_write_ready_i <= 1'b1; 
+//           if($urandom_range(1, 20) >= 5)    mem_req_write_ready_i <= 1'b0;
+//           else                              mem_req_write_ready_i <= 1'b1; 
 //          end
 //        endcase
 //      end
@@ -136,27 +102,27 @@ interface dram_if (input bit clk_i, input bit rst_ni);
 //    // Back Pressure on ready signal 
 //    always_ff @(posedge clk_i or negedge rst_ni) begin
 //      if(~rst_ni) begin
-//        mem_req_wbuf_write_data_ready_i <= 0;
+//        mem_req_write_data_ready_i <= 0;
 //      end else begin
-//        case(mem_req_wbuf_write_data_ready_bp)
+//        case(mem_req_write_data_ready_bp)
 //          NEVER :
 //          begin
-//           mem_req_wbuf_write_data_ready_i <= 1'b1; 
+//           mem_req_write_data_ready_i <= 1'b1; 
 //          end
 //          LIGHT : 
 //          begin 
-//           if($urandom_range(1, 3) == 2)     mem_req_wbuf_write_data_ready_i <= 1'b0;
-//           else                              mem_req_wbuf_write_data_ready_i <= 1'b1; 
+//           if($urandom_range(1, 3) == 2)     mem_req_write_data_ready_i <= 1'b0;
+//           else                              mem_req_write_data_ready_i <= 1'b1; 
 //          end
 //          MEDIUM:
 //          begin 
-//           if($urandom_range(1, 10) >= 4)    mem_req_wbuf_write_data_ready_i <= 1'b0;
-//           else                              mem_req_wbuf_write_data_ready_i <= 1'b1; 
+//           if($urandom_range(1, 10) >= 4)    mem_req_write_data_ready_i <= 1'b0;
+//           else                              mem_req_write_data_ready_i <= 1'b1; 
 //          end
 //          HEAVY: 
 //          begin 
-//           if($urandom_range(1, 20) >= 5)    mem_req_wbuf_write_data_ready_i <= 1'b0;
-//           else                              mem_req_wbuf_write_data_ready_i <= 1'b1; 
+//           if($urandom_range(1, 20) >= 5)    mem_req_write_data_ready_i <= 1'b0;
+//           else                              mem_req_write_data_ready_i <= 1'b1; 
 //          end
 //        endcase
 //      end
