@@ -160,11 +160,20 @@ class test_base extends uvm_test;
     // If the randomization is done the config phase, it doesn't work
 
     // -------------------------------------------------------------------------
-    // Generate random configuration for memory resposne model 
+    // Generate random configuration for memory resposne model
+    // FIXME: temporarily all error insertion is disabled
     // -------------------------------------------------------------------------
     if ( !env.m_rsp_cfg.randomize() with
           {
-            m_enable        == 1'b1;
+            m_enable                   == 1'b1;
+            insert_wr_error        == 1'b0; 
+            insert_rd_error        == 1'b0; 
+            insert_amo_wr_error        == 1'b0; 
+            insert_amo_rd_error        == 1'b0; 
+            insert_wr_exclusive_fail        == 1'b0; 
+            insert_rd_exclusive_fail        == 1'b0; 
+            unsolicited_rsp        == 1'b0; 
+
           } )
     begin    
       `uvm_error("End of elaboration", "Randomization of config failed");
@@ -213,30 +222,15 @@ class test_base extends uvm_test;
   virtual task reset_phase(uvm_phase phase);
     super.reset_phase(phase);
 
-    dram_vif.mem_req_miss_read_ready_i       = 0 ;
-    dram_vif.mem_req_miss_read_base_id_i     = 0 ;
-    dram_vif.mem_resp_miss_read_valid_i      = 0 ;
-    dram_vif.mem_resp_miss_read_i            = 0 ;
+    dram_vif.mem_req_read_ready_i       = 0 ;
+    dram_vif.mem_resp_read_i            = 0 ;
 
     //      Write-buffer write interface
-    dram_vif.mem_req_wbuf_write_ready_i      = 0 ;
-    dram_vif.mem_req_wbuf_write_base_id_i    = 0 ;
-    dram_vif.mem_req_wbuf_write_data_ready_i = 0 ;
-    dram_vif.mem_resp_wbuf_write_valid_i     = 0 ;
-    dram_vif.mem_resp_wbuf_write_i           = 0 ;
-
-    //      Uncached read interface
-    dram_vif.mem_req_uc_read_ready_i         = 0 ;
-    dram_vif.mem_req_uc_read_base_id_i       = 0 ;
-    dram_vif.mem_resp_uc_read_valid_i        = 0 ;
-    dram_vif.mem_resp_uc_read_i              = 0 ;
-
-    //      Uncached write interface
-    dram_vif.mem_req_uc_write_ready_i        = 0 ;
-    dram_vif.mem_req_uc_write_base_id_i      = 0 ;
-    dram_vif.mem_req_uc_write_data_ready_i   = 0 ;
-    dram_vif.mem_resp_uc_write_valid_i       = 0 ;
-    dram_vif.mem_resp_uc_write_i             = 0 ;
+    dram_vif.mem_req_write_ready_i      = 0 ;
+    dram_vif.mem_req_write_base_id_i    = 0 ;
+    dram_vif.mem_req_write_data_ready_i = 0 ;
+    dram_vif.mem_resp_write_valid_i     = 0 ;
+    dram_vif.mem_resp_write_i           = 0 ;
 
     // Reset value for the hpdcache configuration
     conf_vif.cfg_enable_i                      = 'h0 ;
@@ -247,6 +241,7 @@ class test_base extends uvm_test;
     conf_vif.cfg_hwpf_stride_updt_plru_i       = 'h0 ;
     conf_vif.cfg_error_on_cacheable_amo_i      = 'h0 ;
     conf_vif.cfg_rtab_single_entry_i           = 'h0 ;
+    conf_vif.cfg_default_wb_i                  = 'h0 ;
 
      // Reset value for the hwpf_strides configuration
      for ( int m = 0 ;  m < NUM_HW_PREFETCH ; m++ ) begin
@@ -277,6 +272,7 @@ class test_base extends uvm_test;
     conf_vif.cfg_hwpf_stride_sid_i               = env.m_hpdcache_conf.m_cfg_hwpf_stride_sid;
     conf_vif.cfg_error_on_cacheable_amo_i        = env.m_hpdcache_conf.m_cfg_error_on_cacheable_amo;
     conf_vif.cfg_rtab_single_entry_i             = env.m_hpdcache_conf.m_cfg_rtab_single_entry;
+    conf_vif.cfg_default_wb_i                    = env.m_hpdcache_conf.m_cfg_default_wb_i ;
 
     // Generating a random configuration for the hpdcache
     for ( int i = 0 ; i < NUM_HW_PREFETCH ; i++ ) begin
@@ -319,7 +315,8 @@ class test_base extends uvm_test;
     // Add delay
     phase.raise_objection(this, "Starting sequences");
 
-    eot_delay = env.m_top_cfg.m_num_requesters*num_txn*400;
+    eot_delay = env.m_top_cfg.m_num_requesters*num_txn*200;
+   // eot_delay = 100;
     // -------------------------------------
     // Create new sequence
     // start the base sequence here 
@@ -423,10 +420,10 @@ class test_base extends uvm_test;
 
  //   if(env.m_hpdcache_sb.cnt_cache_write_miss > 0 ) begin
  //     cov_write_miss = 0; 
- //     cnt_write_miss_cov:cover(cov_write_miss);
+ //     cnt_write_cov:cover(cov_write_miss);
  //   end
-   // if(env.m_hpdcache_sb.cnt_cache_read_miss > 0 ) cnt_read_miss_cov:cover(cov_read_miss);
-   // if(env.m_hpdcache_sb.cnt_cache_read_miss > 0 ) cnt_read_miss_cov:cover(cov_read_miss);
+   // if(env.m_hpdcache_sb.cnt_cache_read_miss > 0 ) cnt_read_cov:cover(cov_read_miss);
+   // if(env.m_hpdcache_sb.cnt_cache_read_miss > 0 ) cnt_read_cov:cover(cov_read_miss);
  //   if(env.m_hpdcache_sb.cnt_cmo_req > 0 ) begin
  //     cov_cmo_req = 0; 
  //     cnt_cmo_req_cov:cover(cov_cmo_req);

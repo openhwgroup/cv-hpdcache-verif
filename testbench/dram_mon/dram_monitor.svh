@@ -28,8 +28,8 @@ class dram_monitor extends uvm_monitor;
   int                              num_resp_pkts;
   
   // Internal members for monitoring requests
-  uvm_analysis_port #(hpdcache_mem_req_t)     ap_mem_miss_req;
-  uvm_analysis_port #(hpdcache_mem_ext_req_t) ap_mem_miss_ext_req;
+  uvm_analysis_port #(hpdcache_mem_req_t)     ap_mem_req;
+  uvm_analysis_port #(hpdcache_mem_ext_req_t) ap_mem_ext_req;
   hpdcache_mem_req_t                       req;
   hpdcache_mem_ext_req_t                   req_ext;
 
@@ -60,8 +60,8 @@ class dram_monitor extends uvm_monitor;
                   get_full_name( ), ".vif"})
     end
 
-    ap_mem_miss_req      = new("ap_mem_miss_req", this);
-    ap_mem_miss_ext_req  = new("ap_mem_miss_ext_req", this);
+    ap_mem_req      = new("ap_mem_req", this);
+    ap_mem_ext_req  = new("ap_mem_ext_req", this);
 //    req          = mon_trans::type_id::create("req");
 //    req_cloned   = mon_trans::type_id::create("req_cloned");
 
@@ -116,40 +116,22 @@ class dram_monitor extends uvm_monitor;
     forever begin
       @(negedge vif.clk_i);
       
-      if (vif.mem_req_miss_read_valid_o && vif.mem_req_miss_read_ready_i) begin
+      if (vif.mem_req_read_valid_o && vif.mem_req_read_ready_i) begin
 
-        req     = vif.mem_req_miss_read_o; 
+        req     = vif.mem_req_read_o; 
         print_hpdcache_mem_req_t(req, "DRAM MONITOR MISS READ REQ");
-        ap_mem_miss_req.write(req);
-        num_req_pkts++;
-
-      end
-      if (vif.mem_req_uc_read_valid_o && vif.mem_req_uc_read_ready_i) begin
-
-        req     = vif.mem_req_uc_read_o; 
-        print_hpdcache_mem_req_t(req, "DRAM MONITOR UC READ REQ");
-        ap_mem_miss_req.write(req);
+        ap_mem_req.write(req);
         num_req_pkts++;
 
       end
 
       // Write request 
-      if (vif.mem_req_wbuf_write_valid_o && vif.mem_req_wbuf_write_ready_i) begin
+      if (vif.mem_req_write_valid_o && vif.mem_req_write_ready_i) begin
 
-        req     = vif.mem_req_wbuf_write_o; 
+        req     = vif.mem_req_write_o; 
         print_hpdcache_mem_req_t(req, "DRAM MONITOR WBUF WRITE REQ");
-        ap_mem_miss_req.write(req);
+        ap_mem_req.write(req);
         num_req_pkts++;
-
-      end
-      if (vif.mem_req_uc_write_valid_o && vif.mem_req_uc_write_ready_i) begin
-
-        req     = vif.mem_req_uc_write_o; 
-        print_hpdcache_mem_req_t(req, "DRAM MONITOR UC WRITE REQ");
-        ap_mem_miss_req.write(req);
-        num_req_pkts++;
-
-
         // In case of atomics memory sent 2 responses 
         // Except in the case of LDEX/STEX
         if(req.mem_req_command == HPDCACHE_MEM_ATOMIC && !(req.mem_req_atomic == HPDCACHE_MEM_ATOMIC_LDEX || req.mem_req_atomic == HPDCACHE_MEM_ATOMIC_STEX)) begin
@@ -158,16 +140,10 @@ class dram_monitor extends uvm_monitor;
       end
 
       // Write data 
-      if (vif.mem_req_wbuf_write_valid_int_o && vif.mem_req_wbuf_write_ready_int_i) begin
+      if (vif.mem_req_write_valid_int_o && vif.mem_req_write_ready_int_i) begin
 
-        req_ext     = vif.mem_req_wbuf_write_int_o; 
-        ap_mem_miss_ext_req.write(req_ext);
-
-      end
-      if (vif.mem_req_uc_write_valid_int_o && vif.mem_req_uc_write_ready_int_i) begin
-
-        req_ext     = vif.mem_req_uc_write_int_o; 
-        ap_mem_miss_ext_req.write(req_ext);
+        req_ext     = vif.mem_req_write_int_o; 
+        ap_mem_ext_req.write(req_ext);
 
       end
     end
@@ -181,38 +157,20 @@ class dram_monitor extends uvm_monitor;
     hpdcache_mem_resp_r_t   w_rsp;
     forever begin
       @(negedge vif.clk_i);
-      if (vif.mem_resp_miss_read_ready_o && vif.mem_resp_miss_read_valid_int_i) begin
+      if (vif.mem_resp_read_ready_o && vif.mem_resp_read_valid_int_i) begin
 
         // Send object to the scoreboard
-        r_rsp      = vif.mem_resp_miss_read_int_i;
+        r_rsp      = vif.mem_resp_read_int_i;
         print_hpdcache_mem_resp_r_t(r_rsp, "DRAM MONITOR MISS READ RSP");
         ap_mem_read_rsp.write(r_rsp);
         num_resp_pkts++;
 
       end      
-      if (vif.mem_resp_uc_read_ready_o && vif.mem_resp_uc_read_valid_int_i) begin
+      if (vif.mem_resp_write_ready_o && vif.mem_resp_write_valid_i) begin
 
         // Send object to the scoreboard
-        r_rsp      = vif.mem_resp_uc_read_int_i;
-        print_hpdcache_mem_resp_r_t(r_rsp, "DRAM MONITOR UC READ RSP");
-        ap_mem_read_rsp.write(r_rsp);
-        num_resp_pkts++;
-
-      end      
-      if (vif.mem_resp_wbuf_write_ready_o && vif.mem_resp_wbuf_write_valid_i) begin
-
-        // Send object to the scoreboard
-        w_rsp      = vif.mem_resp_wbuf_write_i;
+        w_rsp      = vif.mem_resp_write_i;
         print_hpdcache_mem_resp_w_t(w_rsp, "DRAM MONITOR WBUF WRITE RSP");
-        ap_mem_write_rsp.write(w_rsp);
-        num_resp_pkts++;
-
-      end      
-      if (vif.mem_resp_uc_write_ready_o && vif.mem_resp_uc_write_valid_i) begin
-
-        // Send object to the scoreboard
-        w_rsp      = vif.mem_resp_uc_write_i;
-        print_hpdcache_mem_resp_w_t(w_rsp, "DRAM MONITOR UC WRITE RSP");
         ap_mem_write_rsp.write(w_rsp);
         num_resp_pkts++;
 

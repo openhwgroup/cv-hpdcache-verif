@@ -57,7 +57,15 @@ covergroup hpdcache_req_cg (ref hpdcache_req_mon_t packet);
     bins op_amo_maxu   = {HPDCACHE_REQ_AMO_MAXU};
     bins op_amo_min    = {HPDCACHE_REQ_AMO_MIN };
     bins op_amo_minu   = {HPDCACHE_REQ_AMO_MINU};
-    bins op_cmo        = {HPDCACHE_REQ_CMO     };
+    bins op_cmo_fence              = {HPDCACHE_REQ_CMO_FENCE             };
+    bins op_cmo_prefetch           = {HPDCACHE_REQ_CMO_PREFETCH          };
+    bins op_cmo_inval_nline        = {HPDCACHE_REQ_CMO_INVAL_NLINE       };
+    bins op_cmo_inval_all          = {HPDCACHE_REQ_CMO_INVAL_ALL         };
+    bins op_cmo_flush_nline        = {HPDCACHE_REQ_CMO_FLUSH_NLINE       };
+    bins op_cmo_flush_all          = {HPDCACHE_REQ_CMO_FLUSH_ALL         };
+    bins op_cmo_flush_inval_nline  = {HPDCACHE_REQ_CMO_FLUSH_INVAL_NLINE };
+    bins op_cmo_flush_inval_all    = {HPDCACHE_REQ_CMO_FLUSH_INVAL_ALL   };
+
   }
   cov_be: coverpoint packet.be
   { 
@@ -93,17 +101,6 @@ covergroup hpdcache_req_cg (ref hpdcache_req_mon_t packet);
   { 
     bins no_rsp = {'h0};
     bins rsp    = {'h1};
-  }
-  cov_cmo_type : cross cov_op, cov_size
-  {
-    bins cmo_fence           = binsof(cov_op.op_cmo) && binsof(cov_size.size_0);
-    bins cmo_dinval          = binsof(cov_op.op_cmo) && binsof(cov_size.size_1);
-    // bins cmo_reserved_2      = binsof(cov_op.op_cmo) && binsof(cov_size.size_2);
-    // bins cmo_reserved_3      = binsof(cov_op.op_cmo) && binsof(cov_size.size_3);
-    bins cmo_prefetch_sw     = binsof(cov_op.op_cmo) && binsof(cov_size.size_4);
-    bins cmo_prefetch_hw     = binsof(cov_op.op_cmo) && binsof(cov_size.size_5);
-    bins cmo_prefetch_sw_slc = binsof(cov_op.op_cmo) && binsof(cov_size.size_6);
-    bins cmo_prefetch_hw_slc = binsof(cov_op.op_cmo) && binsof(cov_size.size_7);
   }
 
   cov_set : coverpoint hpdcache_get_req_addr_set(packet.addr)

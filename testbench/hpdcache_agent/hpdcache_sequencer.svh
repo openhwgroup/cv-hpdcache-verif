@@ -22,6 +22,7 @@ class hpdcache_sequencer extends uvm_sequencer #(hpdcache_txn, hpdcache_txn);
 
   `uvm_sequencer_utils(hpdcache_sequencer)
 
+//  hpdcache_top_cfg    m_top_cfg;
   // -------------------------------------------------------
   // List to be passed on to sequence to create unique tids
   // -------------------------------------------------------
@@ -45,6 +46,12 @@ class hpdcache_sequencer extends uvm_sequencer #(hpdcache_txn, hpdcache_txn);
       
   endfunction: new
 
+//  virtual function void build_phase(uvm_phase uvm);
+//    super.build_phase(phase); 
+//
+//    m_top_cfg   = hpdcache_top_cfg::type_id::create("hpdcache top cfg");
+//
+//  endfunction 
   virtual task reset_phase(uvm_phase phase);
      super.reset_phase(phase); 
      q_inflight_tid.delete();

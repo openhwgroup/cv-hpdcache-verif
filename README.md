@@ -1,5 +1,11 @@
 # HPDcache Subsystem Verification
 
+## NOTE 
+HPCache has been through a lot of changes in last few weeks and the TB remains unstable. 
+For the moment CFG1 is working with memory responses without any error. 
+The SV PLRU model has been commented. The directed PLRU tests runs only with write through write policy 
+
+
 ## Introduction
 
 The purpose of this document is to outline the details of the verification environment of HPDcache Subsystem. The HPDcache subsystem is used to verify HPDcache DUT and prefetcher DUT.

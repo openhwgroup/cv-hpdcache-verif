@@ -36,6 +36,7 @@ class hpdcache_conf_txn extends uvm_object;
     rand hpdcache_req_sid_t             m_cfg_hwpf_stride_sid;
     rand logic                          m_cfg_error_on_cacheable_amo;
     rand logic                          m_cfg_rtab_single_entry;
+    rand logic                          m_cfg_default_wb_i;
     // ------------------------------------------------------------------------
     // Constructor
     // ------------------------------------------------------------------------

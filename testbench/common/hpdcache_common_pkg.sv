@@ -449,7 +449,7 @@ package hpdcache_common_pkg;
 
   // print hpdcache req
   function void print_hpdcache_req_t(hpdcache_req_mon_t R, string S);
-      `uvm_info(S, $sformatf("OP=%0s SID=%0x(x), TID=%0x(x), ADDR=%0x(x) SET=%0d(d), TAG=%0x(x), WORD=%0x(x) DATA=%0x(x) BE=%0x(x) SIZE=%0x(x) NEED_RSP=%0x(x) PHYS_IDX=%0x(x) UNCACHEABLE=%0x(x)", 
+      `uvm_info(S, $sformatf("OP=%0s SID=%0x(x), TID=%0x(x), ADDR=%0x(x) SET=%0d(d), TAG=%0x(x), WORD=%0x(x) DATA=%0x(x) BE=%0x(x) SIZE=%0x(x) NEED_RSP=%0x(x) PHYS_IDX=%0x(x) UNCACHEABLE=%0x(x) WRITE POLICY=%s", 
                                            R.op, 
                                            R.sid, 
                                            R.tid, 
@@ -462,7 +462,8 @@ package hpdcache_common_pkg;
                                            R.size, 
                                            R.need_rsp,
                                            R.phys_indexed,
-                                           R.pma.uncacheable), UVM_LOW);
+                                           R.pma.uncacheable,
+                                           R.pma.wr_policy_hint), UVM_LOW);
     
   endfunction 
 
@@ -614,11 +615,14 @@ package hpdcache_common_pkg;
       wbufDataEntries          : HPDCACHE_WBUF_DATA_ENTRIES,
       wbufWords                : HPDCACHE_WBUF_WORDS,
       wbufTimecntWidth         : HPDCACHE_WBUF_TIMECNT_WIDTH,
-      wbufSendFeedThrough      : HPDCACHE_WBUF_SEND_FEEDTHROUGH,
       rtabEntries              : HPDCACHE_RTAB_ENTRIES,
+      flushEntries             : 8,
+      flushFifoDepth           : 4,
       memAddrWidth             : HPDCACHE_PA_WIDTH,
       memIdWidth               : HPDCACHE_MEM_ID_WIDTH,
-      memDataWidth             : HPDCACHE_MEM_DATA_WIDTH
+      memDataWidth             : HPDCACHE_MEM_DATA_WIDTH,
+      wtEn                     : 1, 
+      wbEn                     : 1 
     };
 
   localparam  hpdcache_cfg_t m_hpdcache_cfg = hpdcacheBuildConfig(m_hpdcache_user_cfg);
