@@ -15,8 +15,6 @@
 ##limitations under the License.
 ##[END OF HEADER]
 ## ----------------------------------------------------------------------------
-##  Description : Agent for the hpdcache request
-## ----------------------------------------------------------------------------
 
 import argparse
 import os
