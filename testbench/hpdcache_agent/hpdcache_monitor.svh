@@ -156,11 +156,9 @@ class hpdcache_monitor extends uvm_monitor;
         m_req_packet = req_mon;
         m_hpdcache_req_cg.sample( );
 
-  //      phase.raise_objection(this);    
 
         if(req_mon.need_rsp == 0) begin
           num_req_no_resp_pkts++;
-  //        phase.drop_objection( this );    
         end
    
         // Send object to the scoreboard

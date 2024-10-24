@@ -415,104 +415,11 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
           get_hpdcache_req(i);
         end join_none
       end
-    //  treat_cmo_inval_req();
     join_none
 
     `uvm_info("HPDCACHE SB", "Main Phase Completed", UVM_LOW);
   endtask: main_phase
 
-  // --------------------------------------------------------------
-  // When a CMO is observed folllowing steps are performed
-  // -> register the request
-  // -> when a new request arrives (after CMO) invalidate the line
-  // ---> Delete the entry of memory and memory shadow for that addresse 
-  // ---> For a load on the same address, we expect now the new value
-  // -> The operation of CMO is performed only when a new request that follows
-  // the CMO arrives. Otherwise it may cause conflict with the ongoing the
-  // request 
-  // --------------------------------------------------------------
-  virtual task treat_cmo_inval_req(); 
-    hpdcache_req_mon_t      req;
-    hpdcache_req_mon_t      prev_req;
-    hpdcache_set_t      set;
-    hpdcache_tag_t      tag;
-    hpdcache_req_addr_t addr;
-    int               offset;
-
-    bit               store_inflight;
-
-    prev_req.op = HPDCACHE_REQ_LOAD; //default value 
-    for ( int r = 0 ; r < NREQUESTERS ; r++ ) begin
-      automatic int i = r;
-      fork begin
-       forever begin 
-         @e_new_hpdcache_req[i]; 
-         
-         req = m_hpdcache_req.pop_front();
-
-
-
-         // --------------------------------------------------
-         // Get the aligned address
-         // Get the word at memory interface 
-         // --------------------------------------------------
-         addr   = prev_req.addr;
-         offset = prev_req.addr[HPDCACHE_OFFSET_WIDTH -1 :0];
-         addr[HPDCACHE_OFFSET_WIDTH -1 :0] = 0;
-         // ---------------------------------------------------------
-         // get set and tag from the request address
-         // ---------------------------------------------------------
-         set  = hpdcache_get_req_addr_set (prev_req.addr);
-         tag  = hpdcache_get_req_addr_tag (prev_req.addr);
-         if(prev_req.op == HPDCACHE_REQ_CMO) begin 
-           // Wait for every store to finish before applying CMO operation
-             case ( prev_req.size )
-               HPDCACHE_REQ_CMO_FENCE    :  begin  // FENCE
-                  `uvm_info("SB HPDCACHE CMO FENCE", "CMO fence command is sent", UVM_HIGH);
-               end
-               HPDCACHE_REQ_CMO_INVAL_NLINE: begin 
-                 if (m_hpdcache_store_cnt[set][tag] == 0 && m_mem_write_cnt == 0) begin
-                   delete_memory_node(addr);
-                   create_and_init_memory_node(addr, HPDCACHE_MEM_LOAD_NUM);
-                 end // 
-                 for ( int w = 0 ; w < HPDCACHE_WAYS ; w++ ) begin 
-                   if(m_tag_dir[set][w].tag == tag)  begin 
-                     m_tag_dir[set][w].status = SET_INVALID;
-                     `uvm_info("SB CACHE PLRU INVALID CMO", $sformatf("SET=%0d(d), TAG=%0x(x) Invalidated", set, tag), UVM_HIGH );
-                     break;
-                   end
-                 end
-                 `uvm_info("SB HPDCACHE CMO HPDCACHE_REQ_CMO_INVAL_NLINE", $sformatf("SET=%0d(d), TAG=%0x(x)  Offset=%0d(d)", set, tag, offset), UVM_HIGH);
-               end
-               HPDCACHE_REQ_CMO_INVAL_SET_WAY: begin
-                 `uvm_info("SB HPDCACHE CMO FENCE", $sformatf("SET=%0d(d), TAG=%0x(x)  Offset=%0d(d)", set, tag, offset), UVM_HIGH);
-               end
-               HPDCACHE_REQ_CMO_INVAL_ALL: 
-               begin
-                 `uvm_info("SB HPDCACHE CMO HPDCACHE_REQ_CMO_INVAL_ALL", $sformatf("SET=%0d(d), TAG=%0x(x)  Offset=%0d(d)", set, tag, offset), UVM_HIGH);
-                 if (m_hpdcache_store_cnt[set][tag] == 0 && m_mem_write_cnt == 0) begin
-                   foreach(m_memory[i]) begin
-                     delete_memory_node(i);
-                     create_and_init_memory_node(i, HPDCACHE_MEM_LOAD_NUM);
-                    // m_memory.delete();
-                    // m_mem_rsp_model.m_memory.delete();
-                   end
-                   for ( int s = 0 ; s < HPDCACHE_SETS ; s++ ) begin 
-                     for ( int w = 0 ; w < HPDCACHE_WAYS ; w++ ) begin 
-                       m_tag_dir[s][w].status = SET_INVALID; 
-                     end
-                   end
-                 end // 
-               end
-             endcase
-         end // If CMO
-
-         prev_req = req; 
-        ->e_cmo_check_done[i]; 
-       end // Forever
-      end join_none
-    end
-  endtask
   // -------------------------------------------------------------------------
   // Run phase
   // -------------------------------------------------------------------------
@@ -590,12 +497,11 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
       tag_dir_index = -1;
       if(m_top_cfg.m_bPLRU_enable == 1 & req.pma.uncacheable == 0) begin
       
-        if(req.op == HPDCACHE_REQ_CMO) begin 
-          case ( req.size )
+          case ( req.op )
             HPDCACHE_REQ_CMO_FENCE    :  begin  // FENCE
                `uvm_info("SB HPDCACHE CMO FENCE", "CMO fence command is sent", UVM_MEDIUM);
             end
-            HPDCACHE_REQ_CMO_INVAL_NLINE: begin 
+            HPDCACHE_REQ_CMO_INVAL_NLINE, HPDCACHE_REQ_CMO_FLUSH_INVAL_NLINE: begin 
               for ( int w = 0 ; w < HPDCACHE_WAYS ; w++ ) begin 
                 if(m_tag_dir[set][w].tag == tag)  begin 
                   m_tag_dir[set][w].status = SET_INVALID;
@@ -604,21 +510,14 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
                 end
               end
             end
-            HPDCACHE_REQ_CMO_INVAL_SET_WAY: begin
-              for ( int w = 0 ; w < HPDCACHE_WAYS ; w++ ) begin 
-                if(req.wdata[0][w] == 1'b1) begin
-                 m_tag_dir[set][w].status = SET_INVALID;
-                 `uvm_info("SB CACHE PLRU INVALID CMO", $sformatf("SET=%0d(d), TAG=%0x(x) Invalidated", set, tag), UVM_HIGH );
-                end
-              end
-            end
-            HPDCACHE_REQ_CMO_INVAL_ALL: 
+            HPDCACHE_REQ_CMO_INVAL_ALL, HPDCACHE_REQ_CMO_FLUSH_INVAL_ALL: 
             begin
              for ( int s = 0 ; s < HPDCACHE_SETS ; s++ ) begin 
                for ( int w = 0 ; w < HPDCACHE_WAYS ; w++ ) begin 
                  m_tag_dir[s][w].status = SET_INVALID; 
                end
              end
+             `uvm_info("SB CACHE PLRU INVALID ALL CMO", $sformatf("SET=%0d(d), TAG=%0x(x) Invalidated", set, tag), UVM_HIGH );
             end
             HPDCACHE_REQ_CMO_PREFETCH:
             begin
@@ -633,21 +532,22 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
             //   m_tag_dir[set][tag_dir_index].status = SET_IN_HPDCACHE;
             // end
             end
-          endcase
-        end else begin
-          tag_dir_index   = get_index_from_tag_dir(set, tag);
+            default: 
+            if (!is_cmo(req.op)) begin
+              tag_dir_index   = get_index_from_tag_dir(set, tag);
 
-          // It is a hit
-          // just update plru 
-          if(tag_dir_index >= 0) begin 
-            `uvm_info("SB CACHE HIT PLRU", $sformatf("TAG %0x(x) is a hit", tag), UVM_HIGH );
-            if(!is_amo(req.op)) begin
-              cache_hit_update_bPLRU(set, tag_dir_index);
-              m_tag_dir[set][tag_dir_index].tag    = tag;
-              m_tag_dir[set][tag_dir_index].status = SET_IN_HPDCACHE;
+              // It is a hit
+              // just update plru 
+              if(tag_dir_index >= 0) begin 
+                `uvm_info("SB CACHE HIT PLRU", $sformatf("TAG %0x(x) is a hit", tag), UVM_HIGH );
+                if(!is_amo(req.op)) begin
+                  cache_hit_update_bPLRU(set, tag_dir_index);
+                  m_tag_dir[set][tag_dir_index].tag    = tag;
+                  m_tag_dir[set][tag_dir_index].status = SET_IN_HPDCACHE;
+                end
+              end
             end
-          end
-        end
+          endcase
       end
 
       //-------------------------------------------------------
@@ -705,7 +605,7 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
       // Prediction of error for CMOs
       // CMOs request with uncacheable == 1 is an error 
       // --------------------------------------------------
-      if(req.op ==  HPDCACHE_REQ_CMO) begin
+      if(is_cmo (req.op) ==  1) begin
         if(req.pma.uncacheable == 1) m_error[set][tag] = 1'b1; 
         else                     m_error[set][tag] = 1'b0;
       end
@@ -825,7 +725,7 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
         // -------------------------------------------------------------
         cov_rsp_error_check = 0;
         cov_rsp_amo_error_check = 0;
-        if ( (req.op == HPDCACHE_REQ_LOAD ) || (req.op ==  HPDCACHE_REQ_CMO) || (req.op == HPDCACHE_REQ_STORE && req.pma.uncacheable == 1)) begin
+        if ( (req.op == HPDCACHE_REQ_LOAD ) || (is_cmo(req.op) ==  1'b1) || (req.op == HPDCACHE_REQ_STORE && req.pma.uncacheable == 1)) begin
 
           if ( m_error[set][tag] != rsp.error) begin
             `uvm_error("SB HPDCACHE ERROR ERROR", $sformatf("SET=%0d(d), TAG=%0x(x), Expected : %0b(b), RECIEVED : %0b(b)", set, tag, m_error[set][tag], rsp.error));
@@ -834,9 +734,10 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
             cov_rsp_error_check = 1;
             cov_rsp_error: cover(cov_rsp_error_check);
           end
-          m_error[set][tag]     = 1'b0; 
+      //    m_error[set][tag]     = 1'b0; 
         end else if (req.op == HPDCACHE_REQ_STORE && req.pma.uncacheable == 0) begin
-          m_error[set][tag]     = 1'b0; 
+ //         // In the case of cacheable store(WT),  error is always 0
+          if((req.pma.wr_policy_hint == HPDCACHE_WR_POLICY_WT) || (req.pma.wr_policy_hint == HPDCACHE_WR_POLICY_AUTO) & (m_hpdcache_conf.m_cfg_default_wb_i == 0)) m_error[set][tag]     = 1'b0; 
           if ( m_error[set][tag] != rsp.error) begin
             `uvm_error("SB HPDCACHE ERROR ERROR", $sformatf("SET=%0d(d), TAG=%0x(x),  Expected : %0b(b), RECIEVED : %0b(b)", set, tag, m_error[set][tag], rsp.error));
           end else begin
@@ -872,11 +773,12 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
             `uvm_error("SB CACHE PLRU HIT ERROR", $sformatf("Set %0x(x) Tag %0x(x)", set, tag ));
           end
         end
+
         // -------------------------------------------------
         // Check data if load rsp
         // Or a valid AMO request 
         // -------------------------------------------------
-        if (   (req.op == HPDCACHE_REQ_LOAD ) || (req.op ==  HPDCACHE_REQ_CMO && req.size inside {[4:5]}) ||
+        if (   (req.op == HPDCACHE_REQ_LOAD ) || (is_cmo(req.op)) ||
               !(req.op == HPDCACHE_REQ_AMO_SC || req.op == HPDCACHE_REQ_STORE || req.op == HPDCACHE_REQ_LOAD) &&
              (!(m_hpdcache_conf.m_cfg_error_on_cacheable_amo == 1 && req.pma.uncacheable == 0) ) ) begin
 
@@ -884,7 +786,7 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
           // ----------------------------------------
           // Do not verify data in the case of CMOs
           // ----------------------------------------
-          if(!(req.op ==  HPDCACHE_REQ_CMO && req.size inside {[4:5]})) begin
+          if(!(is_cmo(req.op))) begin
             data      = m_load_data[set][tag].pop_front()[(word)*HPDCACHE_REQ_DATA_WIDTH +: HPDCACHE_REQ_DATA_WIDTH];
             error = 'h0;
             if(m_memory.exists(addr)) // if invall comes at the same time, this may not exists
@@ -959,7 +861,7 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
         // section of memory 
         // -------------------------------------------------------------
         if(m_hpdcache_conf.m_cfg_error_on_cacheable_amo == 1 && req.pma.uncacheable == 0) begin
-          if(! (req.op == HPDCACHE_REQ_LOAD ||req.op == HPDCACHE_REQ_STORE || req.op == HPDCACHE_REQ_CMO) ) begin
+          if(! (req.op == HPDCACHE_REQ_LOAD ||req.op == HPDCACHE_REQ_STORE || (is_cmo(req.op) == 1) )) begin
             if(rsp.error == 0) begin
               `uvm_error("SB HPDCACHE ERROR ERROR", $sformatf("ADDR=%0x(x), SET=%0d(d), TAG=%0x(x) BYTE=%0d(d) ACC ERROR=%0x(x) EXP ERROR=%0x(x)", req.addr, set, tag, i, rsp.error, 1'b1 ));
             end
@@ -981,6 +883,7 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
     hpdcache_req_mon_t     dc_req;
     hpdcache_set_t         set;
     hpdcache_tag_t         tag;
+    int                tag_dir_index = -1; 
 
     forever begin
 
@@ -1017,6 +920,44 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
       prev_mem_set            = set;
       prev_mem_tag            = tag;
 
+      // ---------------------------------------------------------
+      // Predict the cache miss
+      // ATOMIC is always miss
+      // ---------------------------------------------------------
+      cov_tag_dir_miss_check = 0;
+      if ( req.mem_req_cacheable == 1 && req.mem_req_command == HPDCACHE_MEM_READ && m_top_cfg.m_bPLRU_enable == 1 ) begin
+        for (int way = 0; way < HPDCACHE_WAYS; way++) begin
+          if((m_tag_dir[set][way].status == SET_IN_HPDCACHE) & (m_tag_dir[set][way].tag == tag)) begin
+           `uvm_error("SB CACHE MISS ERROR", $sformatf("TAG %0x(x) should be a hit", tag) );
+          end
+        end
+        cov_tag_dir_miss_check = 1;
+        cov_tag_dir_miss: cover(cov_tag_dir_miss_check);
+        `uvm_info("SB CACHE MISS", $sformatf("TAG %0x(x) is a miss", tag), UVM_HIGH );
+      end
+      // -------------------------------------------------------------------------------
+
+      // -----------------------------
+      // Update tag dir 
+      // Update bPLRU
+      // -----------------------------
+      if ( req.mem_req_cacheable == 1 && req.mem_req_command == HPDCACHE_MEM_READ && m_top_cfg.m_bPLRU_enable == 1 ) begin
+        m_memory[req.mem_req_addr].error = 'h0;
+        tag_dir_index = -1;
+        for (int way = 0; way < HPDCACHE_WAYS; way++) begin
+          `uvm_info("sb cache hit plru search", $sformatf("status %s tag %0x(x) is a hit", m_tag_dir[set][way].status, m_tag_dir[set][way].tag), UVM_DEBUG );
+          if(m_tag_dir[set][way].status == SET_INVALID || m_tag_dir[set][way].status == SET_NOT_IN_HPDCACHE) begin 
+            tag_dir_index = way;
+            break;
+          end
+        end
+
+        if(tag_dir_index <0) tag_dir_index = cache_miss_update_bPLRU(set);
+        else cache_hit_update_bPLRU(set, tag_dir_index);
+        `uvm_info("SB PLRU CACHE LINE EVICTED", $sformatf("INDEX %0d(d) STATUS %s TAG %0x", tag_dir_index, m_tag_dir[set][tag_dir_index].status, m_tag_dir[set][tag_dir_index].tag), UVM_HIGH );
+        m_tag_dir[set][tag_dir_index].tag    = tag;
+        m_tag_dir[set][tag_dir_index].status = SET_IN_HPDCACHE;
+      end
       if ( req.mem_req_cacheable == 0 && (req.mem_req_command == HPDCACHE_MEM_READ ||req.mem_req_command ==  HPDCACHE_MEM_ATOMIC && req.mem_req_atomic == HPDCACHE_MEM_ATOMIC_LDEX)) begin
 
         // ---------------------------------------------------------
@@ -1032,7 +973,7 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
         cov_mem_access_read_check = 0;
         cov_mem_access_lr_check = 0;
 
-        if ( ! (dc_req.op == HPDCACHE_REQ_LOAD || dc_req.op == HPDCACHE_REQ_AMO_LR || (dc_req.op == HPDCACHE_REQ_CMO && dc_req.size inside {[4:5]}) ) ) begin
+        if ( ! (dc_req.op == HPDCACHE_REQ_LOAD || dc_req.op == HPDCACHE_REQ_AMO_LR || (dc_req.op == HPDCACHE_REQ_CMO_PREFETCH ) ) ) begin
           `uvm_error("SB WRONG MEM ACCESS", $sformatf("HPDCACHE SET=%0d(d), TAG=%0x(x), REQ=%0s MEM_REQ=%0s", set, tag, dc_req.op, req.mem_req_command));
         end else begin 
           `uvm_info("SB MEM ACCESS MATCH", $sformatf("HPDCACHE SET=%0d(d), TAG=%0x(x), REQ=%0s MEM_REQ=%0s",set, tag,  dc_req.op, req.mem_req_command), UVM_DEBUG);
@@ -1323,21 +1264,6 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
       set = hpdcache_get_req_addr_set(ext_read_rsp.mem_req_addr);
       tag = hpdcache_get_req_addr_tag(ext_read_rsp.mem_req_addr);
 
-      // ---------------------------------------------------------
-      // Predict the cache miss
-      // ATOMIC is always miss
-      // ---------------------------------------------------------
-      cov_tag_dir_miss_check = 0;
-      if(m_top_cfg.m_bPLRU_enable == 1 & m_read_req[read_rsp.mem_resp_r_id].mem_req_cacheable == 1 & !(m_read_req[read_rsp.mem_resp_r_id].mem_req_command == HPDCACHE_MEM_ATOMIC)) begin 
-        for (int way = 0; way < HPDCACHE_WAYS; way++) begin
-          if((m_tag_dir[set][way].status == SET_IN_HPDCACHE) & (m_tag_dir[set][way].tag == tag)) begin
-           `uvm_error("SB CACHE MISS ERROR", $sformatf("TAG %0x(x) should be a hit", tag) );
-          end
-        end
-        cov_tag_dir_miss_check = 1;
-        cov_tag_dir_miss: cover(cov_tag_dir_miss_check);
-        `uvm_info("SB CACHE MISS", $sformatf("TAG %0x(x) is a miss", tag), UVM_HIGH );
-      end
 
       if(m_read_req[read_rsp.mem_resp_r_id].mem_req_command == HPDCACHE_MEM_ATOMIC) begin
         // -------------------------------------------------------------------------------
@@ -1353,7 +1279,6 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
       // Read has responded with an error 
       // Mark data to be corrupted
       // ---------------------------------------------------------
-      m_error[set][tag] = 1'b0;  
       if(read_rsp.mem_resp_r_error == HPDCACHE_MEM_RESP_NOK) begin
 
         if(m_memory.exists(addr)) foreach(m_memory[addr].error[i]) m_memory[addr].error[i] = 1'b1; 
@@ -1377,31 +1302,33 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
         m_wr_amo_rsp_rcv = 0;
       end else begin
 
+//        if(m_read_req[read_rsp.mem_resp_r_id].mem_req_command == HPDCACHE_MEM_ATOMIC) m_error_amo[set][tag] = 1'b0;
+        if(m_read_req[read_rsp.mem_resp_r_id].mem_req_command == HPDCACHE_MEM_READ)   m_error[set][tag]     = 1'b0;  
         // -------------------------------------------------------------------------------
 
         // -----------------------------
         // Update tag dir 
         // Update bPLRU
         // -----------------------------
-        if(m_read_req[read_rsp.mem_resp_r_id].mem_req_command == HPDCACHE_MEM_READ  & m_read_req[read_rsp.mem_resp_r_id].mem_req_cacheable == 1 & read_rsp.mem_resp_r_last == 1) begin 
-          m_memory[addr].error = 'h0;
-          if(m_top_cfg.m_bPLRU_enable == 1 & m_read_req[read_rsp.mem_resp_r_id].mem_req_cacheable == 1) begin 
-            tag_dir_index = -1;
-            for (int way = 0; way < HPDCACHE_WAYS; way++) begin
-              `uvm_info("sb cache hit plru search", $sformatf("status %s tag %0x(x) is a hit", m_tag_dir[set][way].status, m_tag_dir[set][way].tag), UVM_DEBUG );
-              if(m_tag_dir[set][way].status == SET_INVALID || m_tag_dir[set][way].status == SET_NOT_IN_HPDCACHE) begin 
-                tag_dir_index = way;
-                break;
-              end
-            end
+      //  if(m_read_req[read_rsp.mem_resp_r_id].mem_req_command == HPDCACHE_MEM_READ  & m_read_req[read_rsp.mem_resp_r_id].mem_req_cacheable == 1 & read_rsp.mem_resp_r_last == 1) begin 
+      //    m_memory[addr].error = 'h0;
+      //    if(m_top_cfg.m_bPLRU_enable == 1 & m_read_req[read_rsp.mem_resp_r_id].mem_req_cacheable == 1) begin 
+      //      tag_dir_index = -1;
+      //      for (int way = 0; way < HPDCACHE_WAYS; way++) begin
+      //        `uvm_info("sb cache hit plru search", $sformatf("status %s tag %0x(x) is a hit", m_tag_dir[set][way].status, m_tag_dir[set][way].tag), UVM_DEBUG );
+      //        if(m_tag_dir[set][way].status == SET_INVALID || m_tag_dir[set][way].status == SET_NOT_IN_HPDCACHE) begin 
+      //          tag_dir_index = way;
+      //          break;
+      //        end
+      //      end
 
-            if(tag_dir_index <0) tag_dir_index = cache_miss_update_bPLRU(set);
-            else cache_hit_update_bPLRU(set, tag_dir_index);
-            `uvm_info("SB PLRU CACHE LINE EVICTED", $sformatf("INDEX %0d(d) STATUS %s TAG %0x", tag_dir_index, m_tag_dir[set][tag_dir_index].status, m_tag_dir[set][tag_dir_index].tag), UVM_HIGH );
-            m_tag_dir[set][tag_dir_index].tag    = tag;
-            m_tag_dir[set][tag_dir_index].status = SET_IN_HPDCACHE;
-          end
-        end
+      //      if(tag_dir_index <0) tag_dir_index = cache_miss_update_bPLRU(set);
+      //      else cache_hit_update_bPLRU(set, tag_dir_index);
+      //      `uvm_info("SB PLRU CACHE LINE EVICTED", $sformatf("INDEX %0d(d) STATUS %s TAG %0x", tag_dir_index, m_tag_dir[set][tag_dir_index].status, m_tag_dir[set][tag_dir_index].tag), UVM_HIGH );
+      //      m_tag_dir[set][tag_dir_index].tag    = tag;
+      //      m_tag_dir[set][tag_dir_index].status = SET_IN_HPDCACHE;
+      //    end
+      //  end
       end
     
       // ----------------------------------------------------------------------
@@ -1508,7 +1435,6 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
       // responded before sending the request to memory interface
       //
       // ---------------------------------------------------------
-      m_error[set][tag] = 1'b0;  
 
 
       if(m_write_req[write_rsp.mem_resp_w_id].mem_req.mem_req_command == HPDCACHE_MEM_ATOMIC) m_wr_amo_rsp_rcv = 1;
@@ -1525,24 +1451,27 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
             // ------------------------------------------------
             // If cacheable, req response has alreayd arrived.
             // ------------------------------------------------
-            if(m_write_req[write_rsp.mem_resp_w_id].mem_req.mem_req_cacheable == 1)  m_error[set][tag]     = 1'b0;
-            else  m_error[set][tag]     = 1'b1;
+            if(m_write_req[write_rsp.mem_resp_w_id].mem_req.mem_req_cacheable == 0)  m_error[set][tag]     = 1'b1;
+           // else  m_error[set][tag]     = 1'b1;
           end
 
           // ------------------------------------------------
           // Mark data as corrupted
           // ------------------------------------------------
           if(m_write_req[write_rsp.mem_resp_w_id].mem_be[i] == 1) begin 
-            // If invall comes at the same time this node may not exists
             if(m_memory.exists(addr)) m_memory[addr].error[i + word*HPDCACHE_MEM_DATA_WIDTH/8] = 1; 
           end
 
         end else begin
 
           if(m_write_req[write_rsp.mem_resp_w_id].mem_req.mem_req_command == HPDCACHE_MEM_WRITE ) begin
+            m_error[set][tag] = 1'b0;  
             if(m_write_req[write_rsp.mem_resp_w_id].mem_be[i] == 1) begin 
-              // If invall comes at the same time this node may not exists
-              if(m_memory.exists(addr)) m_memory[addr].error[i + word*HPDCACHE_MEM_DATA_WIDTH/8] = 0; 
+              if(m_memory.exists(addr)) begin
+                m_memory[addr].error[i + word*HPDCACHE_MEM_DATA_WIDTH/8] = 0;
+//                m_memory[addr].data[8*i + word*HPDCACHE_MEM_DATA_WIDTH +: 8] = m_write_req[write_rsp.mem_resp_w_id].mem_data[8*i + word*HPDCACHE_MEM_DATA_WIDTH +:8];
+//                `uvm_info("SB HPDCACHE MEM STORE", $sformatf("SET=%0d(d), TAG=%0x(x) WORD=%0d(d) Offset=%0d(d) DATA=%0x(x) MEM=%0x(x)", set, tag, word, offset, m_memory[addr].data, m_write_req[write_rsp.mem_resp_w_id].mem_data), UVM_MEDIUM);
+              end
             end
           end
 

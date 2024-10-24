@@ -24,8 +24,6 @@ class dram_mon_cfg extends uvm_component;
     `uvm_component_utils( dram_mon_cfg)
      rand bp_t wbuf_write_ready_bp;
      rand bp_t wbuf_write_data_ready_bp;
-     rand bp_t uc_write_ready_bp;
-     rand bp_t uc_write_data_ready_bp;
     // ----------------------------------------------------------------------- 
     // Constructor
     // ----------------------------------------------------------------------- 

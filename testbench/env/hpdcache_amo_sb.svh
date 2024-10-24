@@ -30,7 +30,7 @@
 // Else AMO request is sent to atomic memory interface 
 // --------------------------------------------------
 // Performance counter 
-if(req.pma.uncacheable == 1 && !(req.op == HPDCACHE_REQ_CMO)) cnt_uncached_req++;
+if(req.pma.uncacheable == 1 && !(is_amo(req.op) == 1)) cnt_uncached_req++;
 
 if ( is_amo(req.op) ) begin
     // Performance counter 
@@ -151,7 +151,7 @@ if(!(m_hpdcache_conf.m_cfg_error_on_cacheable_amo == 1 && req.pma.uncacheable ==
   // Create/update memory node for AMOs 
   // For SC creation of a new memory node depends on the SC status
   // --------------------------------------------------------------
-  if(!(req.op == HPDCACHE_REQ_AMO_SC || req.op == HPDCACHE_REQ_STORE || req.op == HPDCACHE_REQ_LOAD || req.op == HPDCACHE_REQ_CMO)) begin
+  if(!(req.op == HPDCACHE_REQ_AMO_SC || req.op == HPDCACHE_REQ_STORE || req.op == HPDCACHE_REQ_LOAD || is_cmo(req.op) == 1)) begin
 
     create_and_init_memory_node(addr, HPDCACHE_MEM_LOAD_NUM);
     if(req.need_rsp == 1) m_load_data[set][tag].push_back(m_memory[addr].data);
@@ -298,7 +298,7 @@ if(!(m_hpdcache_conf.m_cfg_error_on_cacheable_amo == 1 && req.pma.uncacheable ==
   // 
   // Debug Message
   // -------------------------------------------------------------
-  if(!(req.op == HPDCACHE_REQ_AMO_SC || req.op == HPDCACHE_REQ_STORE || req.op == HPDCACHE_REQ_LOAD || req.op == HPDCACHE_REQ_CMO)) begin
+  if(!(req.op == HPDCACHE_REQ_AMO_SC || req.op == HPDCACHE_REQ_STORE || req.op == HPDCACHE_REQ_LOAD || is_cmo(req.op) == 1)) begin
 
     `uvm_info("SB HPDCACHE AFTER AMO", $sformatf("SET=%0d(d), TAG=%0x(x)  Offset=%0d(d) READ=%0x(x)", set, tag, offset, m_memory[addr].data), UVM_MEDIUM);
 

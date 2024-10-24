@@ -70,13 +70,12 @@ class hpdcache_driver extends uvm_driver # (hpdcache_txn);
        hpdcache_vif.core_req_i.phys_indexed     <= 0;
 
        // PMA 
-       hpdcache_vif.core_req_i.pma.uncacheable  <= 0;
-       hpdcache_vif.core_req_i.pma.io           <= 0;
 
-        hpdcache_vif.core_req_abort_i           <= 0;
-        hpdcache_vif.core_req_tag_i             <= 0;
-        hpdcache_vif.core_req_pma_i.uncacheable   <= 0;
-        hpdcache_vif.core_req_pma_i.io            <= 0;
+       hpdcache_vif.core_req_abort_i           <= 0;
+       hpdcache_vif.core_req_tag_i             <= 0;
+       hpdcache_vif.core_req_pma_i.uncacheable     <= 0;
+       hpdcache_vif.core_req_pma_i.io              <= 0;
+       hpdcache_vif.core_req_pma_i.wr_policy_hint  <= HPDCACHE_WR_POLICY_AUTO;
 
         `uvm_info(this.name, "Reset stage complete.", UVM_LOW)
     endtask
@@ -105,9 +104,7 @@ class hpdcache_driver extends uvm_driver # (hpdcache_txn);
        // Drive hpdcache iterface
        forever begin
            seq_item_port.get_next_item(req);
-           `uvm_info("HPDCACHE DRIVER", "New Request Recieved", UVM_HIGH);
 
-//           @ (posedge hpdcache_vif.clk_i);
 
            if(req.m_txn_idle_cycles > 0)
              hpdcache_vif.wait_n_clocks(req.m_txn_idle_cycles);
@@ -124,6 +121,7 @@ class hpdcache_driver extends uvm_driver # (hpdcache_txn);
            hpdcache_vif.core_req_i.need_rsp        <=  req.m_req_need_rsp;
            hpdcache_vif.core_req_i.phys_indexed    <=  req.m_req_phys_indexed;
            hpdcache_vif.core_req_i.pma.uncacheable <=  req.m_req_uncacheable;  
+           hpdcache_vif.core_req_i.pma.wr_policy_hint  <= req.m_wr_policy_hint;
            hpdcache_vif.core_req_abort_i           <=  1'b0;
 
            // Wait for the request to be consumed
@@ -153,6 +151,7 @@ class hpdcache_driver extends uvm_driver # (hpdcache_txn);
              hpdcache_vif.core_req_abort_i           <=  req.m_req_abort;
              hpdcache_vif.core_req_pma_i.uncacheable <=  req.m_req_uncacheable;
              hpdcache_vif.core_req_pma_i.io          <=  req.m_req_io;
+             hpdcache_vif.core_req_pma_i.wr_policy_hint  <= req.m_wr_policy_hint;
              hpdcache_vif.core_req_tag_i             <=  req.m_req_tag;
              hpdcache_vif.core_req_i.phys_indexed    <=  req.m_req_phys_indexed;
              @(posedge hpdcache_vif.clk_i);
@@ -178,7 +177,7 @@ class hpdcache_driver extends uvm_driver # (hpdcache_txn);
              rsp = hpdcache_txn::type_id::create("new rsp");
              rsp.m_req_tid = hpdcache_vif.core_rsp_o.tid;
              rsp.m_req_sid = hpdcache_vif.core_rsp_o.sid;
-             rsp.set_sequence_id(rsp_list[rsp.m_req_tid].pop_front().get_transaction_id);
+             rsp.set_id_info(rsp_list[rsp.m_req_tid].pop_front());
 
              seq_item_port.put(rsp);
              `uvm_info("HPDCACHE DRIVER", "New Response Sent", UVM_HIGH);
