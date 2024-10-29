@@ -66,6 +66,7 @@ class hpdcache_c extends uvm_object;
 
   // status, hit/miss/may be 
   set_status_e      status;
+  bit               dirty;
 
   // Dcache configuration
 
@@ -121,6 +122,7 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
   hpdcache_c                           m_hpdcache[HPDCACHE_SETS][$];
   hpdcache_c                           m_tag_dir[HPDCACHE_SETS][HPDCACHE_WAYS];
   bit [HPDCACHE_WAYS -1: 0]            m_bPLRU_table[HPDCACHE_SETS];
+  bit [HPDCACHE_WAYS -1: 0]            m_dirty_bit[HPDCACHE_SETS];
   // -----------------------------------------------------
   // Shadow of memory rsp model
   // A copy of memory is maintained in the env 
@@ -369,7 +371,8 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
 
       for ( int w = 0 ; w < HPDCACHE_WAYS ; w++ ) begin 
         m_tag_dir[s][w] = hpdcache_c::type_id::create($sformatf("hpdcache_node_%0d_%0d", s, w), this); 
-        m_tag_dir[s][w].status = SET_NOT_IN_HPDCACHE; 
+        m_tag_dir[s][w].status = SET_NOT_IN_HPDCACHE;
+        m_tag_dir[s][w].dirty  = 0;
       end
     end
     m_load_data.delete();
@@ -505,6 +508,7 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
               for ( int w = 0 ; w < HPDCACHE_WAYS ; w++ ) begin 
                 if(m_tag_dir[set][w].tag == tag)  begin 
                   m_tag_dir[set][w].status = SET_INVALID;
+                  m_tag_dir[set][w].dirty  = 1'b0;
                   `uvm_info("SB CACHE PLRU INVALID CMO", $sformatf("SET=%0d(d), TAG=%0x(x) Invalidated", set, tag), UVM_HIGH );
                   break;
                 end
@@ -514,7 +518,8 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
             begin
              for ( int s = 0 ; s < HPDCACHE_SETS ; s++ ) begin 
                for ( int w = 0 ; w < HPDCACHE_WAYS ; w++ ) begin 
-                 m_tag_dir[s][w].status = SET_INVALID; 
+                 m_tag_dir[s][w].status   = SET_INVALID; 
+                 m_tag_dir[set][w].dirty  = 1'b0;
                end
              end
              `uvm_info("SB CACHE PLRU INVALID ALL CMO", $sformatf("SET=%0d(d), TAG=%0x(x) Invalidated", set, tag), UVM_HIGH );
@@ -525,12 +530,12 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
 
              // It is a hit
              // just update plru 
-            // if(tag_dir_index >= 0) begin 
-            //   `uvm_info("SB CACHE HIT PLRU", $sformatf("TAG %0x(x) is a hit", tag), UVM_HIGH );
-            //   cache_hit_update_bPLRU(set, tag_dir_index);
-            //   m_tag_dir[set][tag_dir_index].tag    = tag;
-            //   m_tag_dir[set][tag_dir_index].status = SET_IN_HPDCACHE;
-            // end
+             if(tag_dir_index >= 0) begin 
+               `uvm_info("SB CACHE HIT PLRU", $sformatf("TAG %0x(x) is a hit", tag), UVM_HIGH );
+               cache_hit_update_bPLRU(set, tag_dir_index);
+               m_tag_dir[set][tag_dir_index].tag    = tag;
+               m_tag_dir[set][tag_dir_index].status = SET_IN_HPDCACHE;
+             end
             end
             default: 
             if (!is_cmo(req.op)) begin
@@ -736,6 +741,7 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
           end
       //    m_error[set][tag]     = 1'b0; 
         end else if (req.op == HPDCACHE_REQ_STORE && req.pma.uncacheable == 0) begin
+
  //         // In the case of cacheable store(WT),  error is always 0
           if((req.pma.wr_policy_hint == HPDCACHE_WR_POLICY_WT) || (req.pma.wr_policy_hint == HPDCACHE_WR_POLICY_AUTO) & (m_hpdcache_conf.m_cfg_default_wb_i == 0)) m_error[set][tag]     = 1'b0; 
           if ( m_error[set][tag] != rsp.error) begin
@@ -937,27 +943,6 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
       end
       // -------------------------------------------------------------------------------
 
-      // -----------------------------
-      // Update tag dir 
-      // Update bPLRU
-      // -----------------------------
-      if ( req.mem_req_cacheable == 1 && req.mem_req_command == HPDCACHE_MEM_READ && m_top_cfg.m_bPLRU_enable == 1 ) begin
-        m_memory[req.mem_req_addr].error = 'h0;
-        tag_dir_index = -1;
-        for (int way = 0; way < HPDCACHE_WAYS; way++) begin
-          `uvm_info("sb cache hit plru search", $sformatf("status %s tag %0x(x) is a hit", m_tag_dir[set][way].status, m_tag_dir[set][way].tag), UVM_DEBUG );
-          if(m_tag_dir[set][way].status == SET_INVALID || m_tag_dir[set][way].status == SET_NOT_IN_HPDCACHE) begin 
-            tag_dir_index = way;
-            break;
-          end
-        end
-
-        if(tag_dir_index <0) tag_dir_index = cache_miss_update_bPLRU(set);
-        else cache_hit_update_bPLRU(set, tag_dir_index);
-        `uvm_info("SB PLRU CACHE LINE EVICTED", $sformatf("INDEX %0d(d) STATUS %s TAG %0x", tag_dir_index, m_tag_dir[set][tag_dir_index].status, m_tag_dir[set][tag_dir_index].tag), UVM_HIGH );
-        m_tag_dir[set][tag_dir_index].tag    = tag;
-        m_tag_dir[set][tag_dir_index].status = SET_IN_HPDCACHE;
-      end
       if ( req.mem_req_cacheable == 0 && (req.mem_req_command == HPDCACHE_MEM_READ ||req.mem_req_command ==  HPDCACHE_MEM_ATOMIC && req.mem_req_atomic == HPDCACHE_MEM_ATOMIC_LDEX)) begin
 
         // ---------------------------------------------------------
@@ -1302,7 +1287,7 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
         m_wr_amo_rsp_rcv = 0;
       end else begin
 
-//        if(m_read_req[read_rsp.mem_resp_r_id].mem_req_command == HPDCACHE_MEM_ATOMIC) m_error_amo[set][tag] = 1'b0;
+        // clean error bit when new data is received
         if(m_read_req[read_rsp.mem_resp_r_id].mem_req_command == HPDCACHE_MEM_READ)   m_error[set][tag]     = 1'b0;  
         // -------------------------------------------------------------------------------
 
@@ -1310,25 +1295,26 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
         // Update tag dir 
         // Update bPLRU
         // -----------------------------
-      //  if(m_read_req[read_rsp.mem_resp_r_id].mem_req_command == HPDCACHE_MEM_READ  & m_read_req[read_rsp.mem_resp_r_id].mem_req_cacheable == 1 & read_rsp.mem_resp_r_last == 1) begin 
-      //    m_memory[addr].error = 'h0;
-      //    if(m_top_cfg.m_bPLRU_enable == 1 & m_read_req[read_rsp.mem_resp_r_id].mem_req_cacheable == 1) begin 
-      //      tag_dir_index = -1;
-      //      for (int way = 0; way < HPDCACHE_WAYS; way++) begin
-      //        `uvm_info("sb cache hit plru search", $sformatf("status %s tag %0x(x) is a hit", m_tag_dir[set][way].status, m_tag_dir[set][way].tag), UVM_DEBUG );
-      //        if(m_tag_dir[set][way].status == SET_INVALID || m_tag_dir[set][way].status == SET_NOT_IN_HPDCACHE) begin 
-      //          tag_dir_index = way;
-      //          break;
-      //        end
-      //      end
+        if(m_read_req[read_rsp.mem_resp_r_id].mem_req_command == HPDCACHE_MEM_READ  & m_read_req[read_rsp.mem_resp_r_id].mem_req_cacheable == 1 & read_rsp.mem_resp_r_last == 1) begin 
+          m_memory[addr].error = 'h0;
+          if(m_top_cfg.m_bPLRU_enable == 1 & m_read_req[read_rsp.mem_resp_r_id].mem_req_cacheable == 1) begin 
+            tag_dir_index = -1;
+            for (int way = 0; way < HPDCACHE_WAYS; way++) begin
+              `uvm_info("sb cache hit plru search", $sformatf("status %s tag %0x(x) is a hit", m_tag_dir[set][way].status, m_tag_dir[set][way].tag), UVM_DEBUG );
+              if(m_tag_dir[set][way].status == SET_INVALID || m_tag_dir[set][way].status == SET_NOT_IN_HPDCACHE) begin 
+                tag_dir_index = way;
+                break;
+              end
+            end
 
-      //      if(tag_dir_index <0) tag_dir_index = cache_miss_update_bPLRU(set);
-      //      else cache_hit_update_bPLRU(set, tag_dir_index);
-      //      `uvm_info("SB PLRU CACHE LINE EVICTED", $sformatf("INDEX %0d(d) STATUS %s TAG %0x", tag_dir_index, m_tag_dir[set][tag_dir_index].status, m_tag_dir[set][tag_dir_index].tag), UVM_HIGH );
-      //      m_tag_dir[set][tag_dir_index].tag    = tag;
-      //      m_tag_dir[set][tag_dir_index].status = SET_IN_HPDCACHE;
-      //    end
-      //  end
+            // If all lines are valid
+            if(tag_dir_index <0) tag_dir_index = cache_miss_update_bPLRU(set);
+            else cache_hit_update_bPLRU(set, tag_dir_index);
+            `uvm_info("SB PLRU CACHE LINE EVICTED", $sformatf("INDEX %0d(d) STATUS %s TAG %0x", tag_dir_index, m_tag_dir[set][tag_dir_index].status, m_tag_dir[set][tag_dir_index].tag), UVM_HIGH );
+            m_tag_dir[set][tag_dir_index].tag    = tag;
+            m_tag_dir[set][tag_dir_index].status = SET_IN_HPDCACHE;
+          end
+        end
       end
     
       // ----------------------------------------------------------------------
@@ -1341,13 +1327,7 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
         if(m_rd_amo_rsp_rcv == 1 & m_wr_amo_rsp_rcv == 1) begin
           if(m_top_cfg.m_bPLRU_enable == 1) begin
             tag_dir_index = -1;
-            for (int way = 0; way < HPDCACHE_WAYS; way++) begin
-              `uvm_info("sb cache hit plru amo search", $sformatf("status %s tag %0x(x) is a hit", m_tag_dir[set][way].status, m_tag_dir[set][way].tag), UVM_DEBUG );
-              if(m_tag_dir[set][way].status == SET_IN_HPDCACHE & (m_tag_dir[set][way].tag == tag)) begin 
-                tag_dir_index = way;
-                break;
-              end
-            end
+            tag_dir_index = get_index_from_tag_dir(set, tag);
 
             if(tag_dir_index >= 0) cache_hit_update_bPLRU(set, tag_dir_index);
             m_rd_amo_rsp_rcv = 0;
@@ -1505,19 +1485,13 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
 
       // ----------------------------------------------------------------------
       // Update PLRU in case of both read and write responses are recieved 
-      // In the case of a miss nothing is done 
-      // in the case of a hit PLRU is updated
+      // In the case of a plru miss nothing is done 
+      // in the case of a plru hit PLRU is updated
       // -----------------------------------------------------------------------
       if(m_rd_amo_rsp_rcv == 1 & m_wr_amo_rsp_rcv == 1) begin
         if(m_write_req[write_rsp.mem_resp_w_id].mem_req.mem_req_command == HPDCACHE_MEM_ATOMIC & m_top_cfg.m_bPLRU_enable == 1) begin
           tag_dir_index = -1;
-          for (int way = 0; way < HPDCACHE_WAYS; way++) begin
-            `uvm_info("sb cache hit plru amo search", $sformatf("status %s tag %0x(x) is a hit", m_tag_dir[set][way].status, m_tag_dir[set][way].tag), UVM_DEBUG );
-            if(m_tag_dir[set][way].status == SET_IN_HPDCACHE & (m_tag_dir[set][way].tag == tag)) begin 
-              tag_dir_index = way;
-              break;
-            end
-          end
+          tag_dir_index = get_index_from_tag_dir(set, tag);
 
           if(tag_dir_index >= 0) cache_hit_update_bPLRU(set, tag_dir_index);
           m_rd_amo_rsp_rcv = 0;

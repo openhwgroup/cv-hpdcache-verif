@@ -53,7 +53,7 @@ def rtest(test, seed):
     run.run_test(test, seed, "UVM_NONE", 1, 0, args.ntxns, 0,args.outdir)
     log = "{}/{}_{}.log".format(args.outdir, test, seed) 
     pattern = "{}/scripts/patterns/sim_patterns.pat".format(project_dir)
-    cmd = "scan_logs.pl -silent -nopreresetwarn {}  -pat {} ".format(log, pattern)
+    cmd = "$PROJECT_DIR/scripts/scan_logs.pl -silent -nopreresetwarn {}  -pat {} ".format(log, pattern)
     ret = os.system(cmd)
     if ret == 0: 
         print ("passing", test, "seed", seed)
