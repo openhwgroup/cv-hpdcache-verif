@@ -19,7 +19,7 @@
 export PROJECT_DIR=${PWD}
 
 ## Parse optional user setup file
-if [[ -f ${PROJECT_DIR}/setup.local.csh ]] ; then
+if [[ -f ${PROJECT_DIR}/setup.local.sh ]] ; then
 	source ${PROJECT_DIR}/setup.local.sh
 fi
 
