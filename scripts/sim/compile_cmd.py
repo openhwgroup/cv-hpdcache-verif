@@ -47,6 +47,11 @@ def compile_cmd(config, outdir, stdout):
       cfg =  "{}/modules/hpdcache_params/hpdcache_params_pkg_config3_EMBEDDED.sv".format(project_dir)
    elif config == "CONFIG4_EMBEDDED":
       cfg =  "{}/modules/hpdcache_params/hpdcache_params_pkg_config4_EMBEDDED.sv".format(project_dir)
+   else:
+      cfg = None
+
+   if cfg == None:
+     raise Exception('Unknown RTL configuration value')
 
    if os.path.isdir("{}".format(outdir)) == False:
      os.system("mkdir {}".format(outdir))

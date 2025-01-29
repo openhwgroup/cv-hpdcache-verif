@@ -83,12 +83,13 @@ Setup
    * git submodule update --init --recursive --remote
 2. setenv PROJECT_LIBS_DIR      ${PROJECT_DIR}/libs
 3. setenv HPDCACHE_DIR          ${PROJECT_DIR}/modules/hpdcache
-4. setenv CV_DV_UTILS_DIR       $CORE_V_VERIF/lib/cv_dv_utils
+4. setenv CORE_V_VERIF          ${PROJECT_DIR}/modules/dv_utils
+5. setenv CV_DV_UTILS_DIR       ${CORE_V_VERIF}/lib/cv_dv_utils
    * or setenv CV_DV_UTILS_DIR ${PROJECT_DIR}/modules/dv_utils/lib/cv_dv_utils
-5. setenv QUESTA_PATH <questa_path> 
+6. setenv QUESTA_PATH <questa_path> 
    ex: setenv QUESTA_PATH <path_to_your_install>/questasim/2023.3
    which vsim: <path_to_your_install>/questasim/2023.3/bin/vsim
-6. setenv setenv PATH ${QUESTA_PATH}/bin:$PATH
+7. setenv PATH ${QUESTA_PATH}/bin:$PATH
    
 ```
 ##	Simulation 
@@ -98,7 +99,7 @@ Followin steps are needed to compile and run a test
 1. cd $PROJECT_DIR/testbench/simu
 2. Compile RTL and UVM testbench: 
 ```
-   python3 $PROJECT_DIR/scripts/sim/sim_cmd_gen.py --help
+   python3 $PROJECT_DIR/scripts/sim/compile.py --help
    ex: python3 $PROJECT_DIR/scripts/sim/compile.py --cfg CONFIG1_HPC --outdir output --stdout 1
 ```
 
