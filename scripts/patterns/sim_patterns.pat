@@ -22,6 +22,7 @@ WARNING,Warning.*at
 RESET,RESET DONE.*0 active
 SEED,sv_seed ([0-9]+)
 EOT,Note: \$finish
+EOT,\$finish
 ERROR,Fatal error
 ERROR,Unrecognized parameter name:
 ERROR,Unexpected characters after parameter value:

@@ -21,10 +21,16 @@ import os
 
 
 project_dir = os.environ["PROJECT_DIR"];
-questa_path = os.environ["QUESTA_PATH"];
 
 
-def run_test(test_name, seed, debug, batch, dump, num_txn, stdout, outdir):
+def run_test(test_name, seed, debug, batch, dump, num_txn, stdout, outdir, simulator):
+   if simulator=="questa":
+      questa_path  = os.environ["QUESTA_PATH"];
+   elif simulator=="vcs":
+      vcs_path     = os.environ["VCS_PATH"];
+   else:
+     raise Exception('Unknown simulator, supported questa and vcs')
+   
    ## get arguments
    if outdir == None: 
       outdir = "output"
@@ -48,14 +54,26 @@ def run_test(test_name, seed, debug, batch, dump, num_txn, stdout, outdir):
       num_txn = 5000 
    
    if batch == 1:
-     batchstr = "-c"
+     if simulator=="questa":
+         batchstr = "-c"
+     elif simulator=="vcs":
+         batchstr = ""
    else:
-     batchstr = ""
+     if simulator=="questa":
+         batchstr = " "
+     elif simulator=="vcs":
+         batchstr = "-gui"
    
    if dump == 1:
-     dumpstr = "{}/testbench/simu/run.do".format(project_dir)
+     if simulator=="questa":
+         dumpstr = "{}/testbench/simu/run.do".format(project_dir)
+     elif simulator=="vcs":
+         dumpstr = "-ucli -do {}/testbench/simu/run_vcs.do".format(project_dir)
    else:
-     dumpstr = "{}/testbench/simu/run_no_log.do".format(project_dir)
+     if simulator=="questa":
+         dumpstr = "{}/testbench/simu/run_no_log.do".format(project_dir)
+     elif simulator=="vcs":
+         dumpstr = ""
 
    if stdout == None:
        stdout = 1
@@ -64,8 +82,11 @@ def run_test(test_name, seed, debug, batch, dump, num_txn, stdout, outdir):
        stdoutstr = ">"
    else:
        stdoutstr = "-l"
-  
+   
    if os.path.isdir("{}".format(outdir)) == False:
      os.system("mkdir {}".format(outdir))
    
-   os.system("vsim {} -do {} +NB_TXNS={} -sv_seed {} +UVM_VERBOSITY={} -wlf {}/{}_{}.wlf +UVM_TESTNAME={} -assertdebug +COVER_VERBOSE -msgmode both -L cv_uvm_dv_utils_lib -64 +UVM_NO_RELNOTES +TIMEOUT=40000000 +PERF_LOG=NO -suppress 8386 -suppress 8233 -do {}/testbench/simu/run.do -lib work opt {} {}/{}_{}.log".format(batchstr, dumpstr, num_txn, seed, debug, outdir, test_name, seed, test_name, project_dir, stdoutstr, outdir, test_name, seed ))
+   if simulator=="questa":
+      os.system("vsim {} -do {} +NB_TXNS={} -sv_seed {} +UVM_VERBOSITY={} -wlf {}/{}_{}.wlf +UVM_TESTNAME={} -assertdebug +COVER_VERBOSE -msgmode both -L cv_uvm_dv_utils_lib -64 +UVM_NO_RELNOTES +TIMEOUT=40000000 +PERF_LOG=NO -suppress 8386 -suppress 8233 -do {}/testbench/simu/run.do -lib work opt {} {}/{}_{}.log".format(batchstr, dumpstr, num_txn, seed, debug, outdir, test_name, seed, test_name, project_dir, stdoutstr, outdir, test_name, seed ))
+   elif simulator=="vcs":
+      os.system("cd {} && ./simv {} {} +vcs+lic+wait +NB_TXNS={} +ntb_random_seed={} +UVM_VERBOSITY={} +UVM_TESTNAME={} -cm line+cond+fsm+tgl+branch+assert -cm_name {}__{} +COVER_VERBOSE +UVM_NO_RELNOTES +TIMEOUT=100000000 +warn=noRT-NCMUCS,noRT-MTOCMUCS +PERF_LOG=NO {} {}_{}.log".format(outdir, batchstr, dumpstr, num_txn, seed, debug, test_name, test_name, seed, stdoutstr, test_name, seed ))

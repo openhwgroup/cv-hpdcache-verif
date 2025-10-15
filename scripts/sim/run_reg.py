@@ -31,6 +31,7 @@ parser.add_argument('--cfg'        , dest='cfg'       , type=str, help='One of t
 parser.add_argument('--nthreads'   , dest='nthreads'  , type=int, help='Number of test run at the same time: default 2')
 parser.add_argument('--ntxns'      , dest='ntxns'     , type=int, help='Number of transactions per test: default 5000')
 parser.add_argument('--outdir'     , dest='outdir'    , type=str, help='output directory: default regression')
+parser.add_argument('--simulator'  , dest='simulator', default="questa", type=str, help='Simulator questa or vcs: default questa')
 args = parser.parse_args()
 
 project_dir = os.environ["PROJECT_DIR"]
@@ -47,10 +48,10 @@ if args.ntxns == None:
 
 
 print("compiling rtl and testbench")
-cmp.compile_cmd(args.cfg, args.outdir, 0)
+cmp.compile_cmd(args.cfg, args.outdir, 0, args.simulator)
 
 def rtest(test, seed):
-    run.run_test(test, seed, "UVM_NONE", 1, 0, args.ntxns, 0,args.outdir)
+    run.run_test(test, seed, "UVM_NONE", 1, 0, args.ntxns, 0,args.outdir, args.simulator)
     log = "{}/{}_{}.log".format(args.outdir, test, seed) 
     pattern = "{}/scripts/patterns/sim_patterns.pat".format(project_dir)
     cmd = "$PROJECT_DIR/scripts/scan_logs.pl -silent -nopreresetwarn {}  -pat {} ".format(log, pattern)

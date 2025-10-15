@@ -609,6 +609,7 @@ package hpdcache_common_pkg;
       mshrSetsPerRam           : HPDCACHE_MSHR_SETS_PER_RAM,
       mshrRamByteEnable        : HPDCACHE_MSHR_RAM_WBYTEENABLE,
       mshrUseRegbank           : HPDCACHE_MSHR_USE_REGBANK,
+      cbufEntries              : 4,
       refillCoreRspFeedthrough : HPDCACHE_REFILL_CORE_RSP_FEEDTHROUGH,
       refillFifoDepth          : HPDCACHE_REFILL_FIFO_DEPTH,
       wbufDirEntries           : HPDCACHE_WBUF_DIR_ENTRIES,
@@ -622,7 +623,8 @@ package hpdcache_common_pkg;
       memIdWidth               : HPDCACHE_MEM_ID_WIDTH,
       memDataWidth             : HPDCACHE_MEM_DATA_WIDTH,
       wtEn                     : 1, 
-      wbEn                     : 1 
+      wbEn                     : 1,
+      lowLatency               : 1
     };
 
   localparam  hpdcache_cfg_t m_hpdcache_cfg = hpdcacheBuildConfig(m_hpdcache_user_cfg);

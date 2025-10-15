@@ -56,7 +56,7 @@ module top;
     logic rst_n, flush;
     xrtl_clock_vif clock_if( .clock(clk));
 
-    xrtl_reset_vif #(1'b1,50,0) reset_if (.clk(clk),
+    xrtl_reset_vif #(1'b1,32'd50,32'b0) reset_if (.clk(clk),
                                           .reset(reset),
                                           .reset_n(rst_n), 
                                           .post_shutdown_phase(post_shutdown_phase));
@@ -227,9 +227,9 @@ module top;
    // Memory response model
    // -----------------------------------------------------------------
    memory_response_if#(
-       .addr_width (HPDCACHE_PA_WIDTH), 
-       .data_width (HPDCACHE_MEM_DATA_WIDTH), 
-       .id_width   (HPDCACHE_MEM_ID_WIDTH)
+       .addr_width (int'(HPDCACHE_PA_WIDTH)), 
+       .data_width (int'(HPDCACHE_MEM_DATA_WIDTH)), 
+       .id_width   (int'(HPDCACHE_MEM_ID_WIDTH))
    ) mem_rsp_if ( .clk( clk ), .rstn( rst_n ) );
 
    axi_if#(
@@ -708,7 +708,7 @@ module top;
        uvm_config_db #( virtual conf_if )::set(null, "*", "CONF_IF" , conf_vif ) ;
        uvm_config_db #( virtual misc_if )::set(uvm_root::get(), "*", "MISC_IF",  hpdcache_misc_if);
        uvm_config_db #( virtual hwpf_stride_cfg_if )::set(null, "*", "PREFETCHER_IF" , hwpf_stride_cfg_vif ) ;
-       uvm_config_db #( virtual xrtl_reset_vif #( 1'b1,50,0) )::set(uvm_root::get(), "*", "hpdcache_reset_driver", reset_if );
+       uvm_config_db #( virtual xrtl_reset_vif #( 1'b1,32'd50,32'b0) )::set(uvm_root::get(), "*", "hpdcache_reset_driver", reset_if );
        uvm_config_db #( virtual pulse_if)::set(uvm_root::get(), "*", "hpdcache_flush_driver", flush_vif );
        uvm_config_db #( virtual xrtl_clock_vif)::set(uvm_root::get() , "*" , "clock_driver" , clock_if);
        uvm_config_db #( virtual bp_vif #(1))::set(uvm_root::get(), "*", "bp_read_agent", m_read_bp_vif);
@@ -716,9 +716,9 @@ module top;
        uvm_config_db #( virtual bp_vif #(1))::set(uvm_root::get(), "*", "bp_write_data_agent", m_write_data_bp_vif);
 
         uvm_config_db #(virtual memory_response_if#(
-            HPDCACHE_PA_WIDTH, 
-            HPDCACHE_MEM_DATA_WIDTH, 
-            HPDCACHE_MEM_ID_WIDTH
+            int'(HPDCACHE_PA_WIDTH), 
+            int'(HPDCACHE_MEM_DATA_WIDTH), 
+            int'(HPDCACHE_MEM_ID_WIDTH)
         ))::set(uvm_root::get( ), "*", "mem_rsp_model" , mem_rsp_if ) ;
 
         uvm_config_db #(virtual axi_if#(
