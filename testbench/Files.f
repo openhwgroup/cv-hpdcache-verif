@@ -1,3 +1,8 @@
++incdir+${PROJECT_DIR}/testbench/conf_and_perf_agent
++incdir+${PROJECT_DIR}/testbench/dram_mon
++incdir+${PROJECT_DIR}/testbench/hpdcache_agent
++incdir+${PROJECT_DIR}/testbench/env
++incdir+${PROJECT_DIR}/testbench/test
 ${PROJECT_DIR}/testbench/common/hpdcache_common_pkg.sv
 ${PROJECT_DIR}/testbench/conf_and_perf_agent/conf_and_perf_if.sv
 ${PROJECT_DIR}/testbench/conf_and_perf_agent/conf_and_perf_pkg.sv

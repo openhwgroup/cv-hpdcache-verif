@@ -793,7 +793,8 @@ class hpdcache_sb#(int NREQUESTERS = 1)  extends uvm_scoreboard;
           // Do not verify data in the case of CMOs
           // ----------------------------------------
           if(!(is_cmo(req.op))) begin
-            data      = m_load_data[set][tag].pop_front()[(word)*HPDCACHE_REQ_DATA_WIDTH +: HPDCACHE_REQ_DATA_WIDTH];
+            data      = m_load_data[set][tag].pop_front();
+            data      = data[(word)*HPDCACHE_REQ_DATA_WIDTH +: HPDCACHE_REQ_DATA_WIDTH];
             error = 'h0;
             if(m_memory.exists(addr)) // if invall comes at the same time, this may not exists
             error     = m_memory[addr].error[(word)*HPDCACHE_REQ_DATA_WIDTH/8 +: HPDCACHE_REQ_DATA_WIDTH/8];

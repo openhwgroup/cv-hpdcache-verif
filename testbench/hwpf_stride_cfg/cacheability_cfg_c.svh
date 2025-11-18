@@ -30,8 +30,8 @@ class cacheability_cfg_c extends uvm_sequence_item;
     // ------------------------------------------------------------------------
     // Fields
     // ------------------------------------------------------------------------
-    logic [63:0] cacheability_base ;
-    logic [63:0] cacheability_mask ;
+    rand logic [63:0] cacheability_base ;
+    rand logic [63:0] cacheability_mask ;
     logic        cacheability_en   ;
 
     // ------------------------------------------------------------------------

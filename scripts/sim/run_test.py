@@ -29,7 +29,8 @@ parser.add_argument('--dump'     , dest='dump',      type=int, help='1: all sign
 parser.add_argument('--num_txn'  , dest='num_txn',   type=int, help='number of transactions ex: 4000, default 5000')
 parser.add_argument('--stdout' , dest='stdout', type=int, help='1: stdout 0: nostdout')
 parser.add_argument('--outdir'   , dest='outdir', type=str, help='output dirctory de fault "output"')
+parser.add_argument('--simulator',dest='simulator', default="questa", type=str, help='Simulator questa or vcs: default questa')
 ##
 args = parser.parse_args()
 
-run.run_test(args.test_name, args.seed, args.debug, args.batch, args.dump, args.num_txn, args.stdout, args.outdir )
+run.run_test(args.test_name, args.seed, args.debug, args.batch, args.dump, args.num_txn, args.stdout, args.outdir, args.simulator)

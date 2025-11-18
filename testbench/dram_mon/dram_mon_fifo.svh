@@ -88,8 +88,8 @@ class dram_mon_fifo extends uvm_component;
        if (!m_cfg.randomize()) begin
          `uvm_error("End of elaboration", "Randomization failed");
        end
-       dram_vif.mem_req_write_ready_bp      = m_cfg.wbuf_write_ready_bp;
-       dram_vif.mem_req_write_data_ready_bp = m_cfg.wbuf_write_data_ready_bp;
+       dram_vif.mem_req_write_ready_bp      = memory_rsp_model_pkg::bp_t'(m_cfg.wbuf_write_ready_bp);
+       dram_vif.mem_req_write_data_ready_bp = memory_rsp_model_pkg::bp_t'(m_cfg.wbuf_write_data_ready_bp);
     endtask
 
     // ----------------------------------------------------------------------- 
