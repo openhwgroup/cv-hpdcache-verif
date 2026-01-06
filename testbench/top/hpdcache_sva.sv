@@ -388,11 +388,7 @@ import hpdcache_common_pkg::*;
       typedef logic [hpdcacheCfg.u.nRequesters-1:0] nRequesters_t;
 
       rr_aribter_read_onehot_check : assert property ( @(posedge clk_i) disable iff(!rst_ni)
-         `ifdef VCS //Illegal use of unpacked in $onehot0
          ($onehot0(nRequesters_t'({<<{core_req_ready_o}})) == 1)) else
-         `else
-         ($onehot0(core_req_ready_o) == 1)) else
-         `endif
            $error("More than one request is accepted at the same time");
 
 
@@ -917,11 +913,7 @@ import hpdcache_common_pkg::*;
   endproperty 
 
   // N operation followed by an operation at diff addr  followed by load
-  `ifdef VCS //Non-constant expression N
   property b2b_op_n_op_load(Op1, int N);
-  `else
-  property b2b_op_n_op_load(Op1, local input int N);
-  `endif
     hpdcache_req_addr_t       Op1_addr; 
     @( posedge clk_i )
     (hpdcache_req(Op1), Op1_addr = addr_sva_aligned) 
@@ -939,11 +931,7 @@ import hpdcache_common_pkg::*;
     ##1 hpdcache_req(HPDCACHE_REQ_LOAD) ##0 (addr_sva_aligned == Op1_addr);
   endproperty 
 
-  `ifdef VCS //Non-constant expression N
   property b2b_amo_n_op_load(Op1, int N);
-  `else
-  property b2b_amo_n_op_load(Op1, local input int N);
-  `endif
     hpdcache_req_addr_t       Op1_addr; 
     @( posedge clk_i )
     (hpdcache_amo_req(Op1), Op1_addr = addr_sva_aligned) 
